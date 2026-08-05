@@ -1,0 +1,25 @@
+appId: com.mjq.wispr-ai
+productName: Wispr AI
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  # Migrations are read at startup by drizzle's migrator. They must be in the
+  # package, not just the repo. Readable from inside the asar.
+  - src/db/migrations/**
+asarUnpack:
+  # Native .node binaries cannot be loaded from inside an asar archive.
+  - '**/*.node'
+  - node_modules/better-sqlite3/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+# Rename before any public release — see CLAUDE.md §1.

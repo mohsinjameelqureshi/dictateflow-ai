@@ -1,0 +1,50 @@
+{
+  "name": "wispr-ai",
+  "version": "0.1.0",
+  "description": "Local-first desktop dictation for Windows",
+  "main": "./out/main/index.js",
+  "author": "Mohsin Jameel Qureshi",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "db:generate": "drizzle-kit generate",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-kit": "^0.31.10",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "lucide-react": "^0.475.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.0.0",
+    "tailwindcss": "^4.3.3",
+    "tw-animate-css": "^1.2.0",
+    "typescript": "^5.7.0",
+    "vite": "^7.3.6",
+    "zustand": "^5.0.14"
+  }
+}

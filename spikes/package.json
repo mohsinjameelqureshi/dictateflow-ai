@@ -1,0 +1,20 @@
+{
+  "name": "wispr-spikes",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Phase 0 risk spikes. Throwaway. Not part of the app.",
+  "type": "module",
+  "scripts": {
+    "spike:hook": "node 01-hook.mjs",
+    "spike:paste": "node 02-paste.mjs",
+    "spike:audio": "electron 03-audio/main.cjs"
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "playwright": "^1.62.1"
+  }
+}
