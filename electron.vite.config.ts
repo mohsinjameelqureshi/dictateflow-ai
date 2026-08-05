@@ -24,7 +24,16 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
+        // A single entry, on purpose. §6.7 fixes `sandbox: true`, and a
+        // sandboxed preload runs as plain CommonJS with no ESM and no ability
+        // to require a second file. Both window surfaces are bundled into one
+        // self-contained file and selected at runtime — see preload/index.ts.
         input: { index: resolve('src/preload/index.ts') },
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
+          inlineDynamicImports: true,
+        },
       },
     },
     resolve: {
@@ -43,8 +52,10 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          // The widget is a second entry point (§7). Added in Phase 2.
           index: resolve('src/renderer/index.html'),
+          // The widget is a second entry point (§7) — a different window with
+          // different rules, not a route inside the main one.
+          widget: resolve('src/renderer/widget.html'),
         },
       },
     },

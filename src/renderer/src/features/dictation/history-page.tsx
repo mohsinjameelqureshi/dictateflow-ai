@@ -1,6 +1,5 @@
 import { Search } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button.js'
 import { Empty, Page } from '@/components/page.js'
 import type { DictationDto } from '@shared/types.js'
 
@@ -23,30 +22,12 @@ export function HistoryPage() {
     return () => clearTimeout(t)
   }, [search, load])
 
-  /** Dev-only. Phase 2 replaces this with the real capture loop. */
-  const seed = async () => {
-    const raw = 'this is a test dictation, training create the possibility'
-    await window.wispr.dictations.create({
-      rawText: raw,
-      finalText: raw,
-      durationMs: 4200,
-      providerId: 'dev',
-    })
-    await load(search)
-  }
+  // The capture loop writes from the main process, so the list has to be
+  // told rather than polled.
+  useEffect(() => window.wispr.dictations.onChanged(() => void load(search)), [load, search])
 
   return (
-    <Page
-      title="History"
-      description="Everything you have dictated, stored locally."
-      actions={
-        import.meta.env.DEV ? (
-          <Button variant="secondary" size="sm" onClick={() => void seed()}>
-            Add test row
-          </Button>
-        ) : undefined
-      }
-    >
+    <Page title="History" description="Everything you have dictated, stored locally.">
       <div className="mb-5 flex items-center gap-2 rounded-lg border border-line bg-panel px-3">
         <Search size={15} className="shrink-0 text-ink-subtle" />
         <input

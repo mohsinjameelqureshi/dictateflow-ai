@@ -20,8 +20,40 @@ export const IPC = {
   dictationsList: 'dictations:list',
   dictationsCreate: 'dictations:create',
 
+  /* the Groq key. safeStorage only — never the settings table (§2). */
+  apiKeyStatus: 'apiKey:status',
+  apiKeySet: 'apiKey:set',
+  apiKeyClear: 'apiKey:clear',
+
+  /* capture loop. The widget renderer owns the microphone; main owns
+     everything else. Both directions are enumerated here. */
+  widgetClip: 'widget:clip',
+  widgetMicError: 'widget:micError',
+
   /* diagnostics */
   appInfo: 'app:info',
 } as const
 
+/**
+ * Main -> renderer pushes. Separate from IPC because these are `send`/`on`,
+ * not `invoke` — there is no reply and the renderer cannot initiate them.
+ */
+export const IPC_EVENT = {
+  /** main -> widget: start, stop or discard a recording */
+  widgetCommand: 'widget:command',
+  /** main -> widget: which of the nine states to render (§11) */
+  widgetState: 'widget:state',
+  /** main -> main window: history changed, reload it */
+  dictationsChanged: 'dictations:changed',
+  /** main -> main window: the tray asked for a page */
+  navigate: 'app:navigate',
+} as const
+
+/**
+ * Passed to the widget window via `additionalArguments` so the single
+ * sandboxed preload bundle knows which surface to expose. See preload/index.ts.
+ */
+export const WIDGET_ROLE_ARG = '--wispr-role=widget'
+
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
+export type IpcEventChannel = (typeof IPC_EVENT)[keyof typeof IPC_EVENT]

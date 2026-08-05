@@ -1,0 +1,31 @@
+/**
+ * §12 — light, near-white surface. One accent colour, everything else
+ * greyscale. Generous whitespace; density is not the goal.
+ *
+ * Tailwind v4 is CSS-first: there is no tailwind.config.js. Tokens live here,
+ * shared by the main window and the widget so the two cannot drift apart.
+ */
+@theme {
+  --color-surface: #fbfbfd;
+  --color-panel: #ffffff;
+
+  --color-ink: #18181b;
+  --color-ink-muted: #71717a;
+  --color-ink-subtle: #a1a1aa;
+
+  --color-line: #e4e4e7;
+  --color-line-soft: #f4f4f5;
+
+  /* The one accent. */
+  --color-accent: #4f46e5;
+  --color-accent-hover: #4338ca;
+  --color-accent-soft: #eef2ff;
+
+  --color-danger: #dc2626;
+  --color-success: #15803d;
+
+  --radius-panel: 12px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}

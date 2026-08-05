@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+@import '../src/theme.css';
+
+/**
+ * The widget window is transparent (§6.2), so nothing here may paint a page
+ * background — the rounded panel inside is the only visible surface.
+ */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    background: transparent;
+  }
+
+  body {
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+    cursor: default;
+  }
+
+  /* The widget is focusable:false and click-through by intent — it is a
+     status readout, not a control. Nothing in it should look interactive. */
+  * {
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

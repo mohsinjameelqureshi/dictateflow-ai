@@ -74,6 +74,61 @@ export interface AppInfo {
   dbPath: string
 }
 
+/* ------------------------------------------------------------ capture ---- */
+
+/**
+ * The nine widget states from §11, plus `error` for the unexpected. §14
+ * requires every failure path to surface somewhere; a generic state is what
+ * stops an unhandled rejection from leaving the widget stuck on "Transcribing".
+ */
+export type WidgetState =
+  | 'listening'
+  | 'processing'
+  | 'inserting'
+  | 'success'
+  | 'no-speech'
+  | 'offline'
+  | 'rate-limited'
+  | 'blocked'
+  | 'cancelled'
+  | 'error'
+
+export interface WidgetStatePayload {
+  state: WidgetState
+  /** Only read for `error`. The other states have fixed copy (§12). */
+  message?: string
+}
+
+/** main -> widget. `cancel` discards the buffer; `stop` returns it. */
+export type WidgetCommand =
+  | { type: 'start'; deviceId: string }
+  | { type: 'stop' }
+  | { type: 'cancel' }
+
+export interface ClipMeta {
+  sampleRate: number
+  durationMs: number
+  samples: number
+  /** Peak absolute amplitude, 0–1. The §6.6 silence guard reads this. */
+  peak: number
+}
+
+/** Structured-cloned over IPC — Uint8Array survives, Buffer does not. */
+export interface ClipPayload {
+  bytes: Uint8Array
+  meta: ClipMeta
+}
+
+/** §6.6 guards. Measured margins are in spikes/README.md — do not loosen. */
+export const MIN_CLIP_MS = 400
+export const MIN_CLIP_PEAK = 0.01
+
+export interface ApiKeyStatus {
+  present: boolean
+  /** Whether the OS actually offers encryption. False means we refuse to store. */
+  encryptionAvailable: boolean
+}
+
 /**
  * Channel -> [request, response]. This is what makes the preload bridge
  * type-safe end to end.
@@ -87,7 +142,23 @@ export interface IpcMap {
   'settings:set': [{ key: SettingKey; value: string }, void]
   'dictations:list': [ListDictationsQuery | undefined, DictationDto[]]
   'dictations:create': [NewDictationDto, DictationDto]
+  'apiKey:status': [void, ApiKeyStatus]
+  'apiKey:set': [string, ApiKeyStatus]
+  'apiKey:clear': [void, ApiKeyStatus]
+  'widget:clip': [ClipPayload, void]
+  'widget:micError': [{ name: string; message: string }, void]
   'app:info': [void, AppInfo]
+}
+
+/** The three destinations in the main window. The tray can request one. */
+export type AppRoute = 'history' | 'insights' | 'settings'
+
+/** Channel -> payload for main-initiated pushes. See IPC_EVENT. */
+export interface IpcEventMap {
+  'widget:command': WidgetCommand
+  'widget:state': WidgetStatePayload
+  'dictations:changed': void
+  'app:navigate': AppRoute
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */

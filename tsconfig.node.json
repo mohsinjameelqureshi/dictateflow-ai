@@ -36,6 +36,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/db/**/*",
+    "src/services/**/*",
     "src/shared/**/*"
   ]
 }

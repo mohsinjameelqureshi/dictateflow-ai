@@ -34,6 +34,7 @@
   "include": [
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
+    "src/renderer/widget/**/*",
     "src/shared/**/*",
     "src/preload/index.d.ts"
   ]

@@ -22,7 +22,8 @@ export function createMainWindow(): BrowserWindow {
     titleBarOverlay: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs'),
+      // .cjs, not .mjs — a sandboxed preload has no ESM context (§6.7).
+      preload: join(__dirname, '../preload/index.cjs'),
       // §6.7 — not optional. This app runs a global keyboard hook and holds
       // an API key.
       contextIsolation: true,

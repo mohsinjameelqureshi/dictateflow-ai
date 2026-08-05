@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Page } from '@/components/page.js'
+import { ApiKeyCard } from './api-key-card.js'
 import type { AppInfo, Settings } from '@shared/types.js'
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -25,7 +26,9 @@ export function SettingsPage() {
       title="Settings"
       description="Full controls arrive in Phase 5. These are the stored defaults."
     >
-      <section className="rounded-panel border border-line bg-panel px-5 py-1">
+      <ApiKeyCard />
+
+      <section className="mt-4 rounded-panel border border-line bg-panel px-5 py-1">
         <h2 className="sr-only">Stored settings</h2>
         {Object.entries(settings).map(([k, v]) => (
           <Row key={k} label={k} value={v === '' ? '(unset)' : String(v)} />

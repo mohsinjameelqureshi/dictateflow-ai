@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sidebar, type Route } from './app/sidebar.js'
 import { TitleBar } from './app/title-bar.js'
 import { HistoryPage } from './features/dictation/history-page.js'
@@ -11,6 +11,9 @@ import { SettingsPage } from './features/settings/settings-page.js'
  */
 export default function App() {
   const [route, setRoute] = useState<Route>('history')
+
+  // The tray's "Settings" entry navigates from the main process.
+  useEffect(() => window.wispr.app.onNavigate(setRoute), [])
 
   return (
     <div className="flex h-full flex-col">
