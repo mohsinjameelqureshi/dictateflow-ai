@@ -3,6 +3,7 @@ import type { AppRoute } from '@shared/types.js'
 import { Sidebar } from './app/sidebar.js'
 import { TitleBar } from './app/title-bar.js'
 import { HistoryPage } from './features/dictation/history-page.js'
+import { DictionaryPage } from './features/dictionary/dictionary-page.js'
 import { InsightsPage } from './features/insights/insights-page.js'
 
 /**
@@ -22,6 +23,7 @@ export default function App() {
         <Sidebar route={route} onNavigate={setRoute} />
         <main className="min-w-0 flex-1 bg-panel">
           {route === 'history' && <HistoryPage />}
+          {route === 'dictionary' && <DictionaryPage />}
           {route === 'insights' && <InsightsPage />}
         </main>
       </div>

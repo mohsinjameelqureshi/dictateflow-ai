@@ -1,4 +1,4 @@
-import { BarChart3, History, Settings, type LucideIcon } from 'lucide-react'
+import { BarChart3, BookMarked, History, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils.js'
 import type { AppRoute } from '@shared/types.js'
 
@@ -10,6 +10,7 @@ interface Item {
 
 const ITEMS: Item[] = [
   { id: 'history', label: 'History', icon: History },
+  { id: 'dictionary', label: 'Dictionary', icon: BookMarked },
   { id: 'insights', label: 'Insights', icon: BarChart3 },
 ]
 

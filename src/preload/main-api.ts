@@ -6,9 +6,12 @@ import type {
   AppRoute,
   AudioInputDevice,
   DictationDto,
+  DictionaryDto,
+  DictionaryWrite,
   IpcMap,
   ListDictationsQuery,
   NewDictationDto,
+  NewDictionaryDto,
   SettingKey,
   Settings,
   SettingsTab,
@@ -60,13 +63,30 @@ export const mainApi = {
   dictations: {
     list: (query?: ListDictationsQuery): Promise<DictationDto[]> =>
       invoke(IPC.dictationsList, query),
+    count: (query?: ListDictationsQuery): Promise<number> => invoke(IPC.dictationsCount, query),
     create: (input: NewDictationDto): Promise<DictationDto> => invoke(IPC.dictationsCreate, input),
+    setFavorite: (id: number, favorite: boolean): Promise<DictationDto | null> =>
+      invoke(IPC.dictationsSetFavorite, { id, favorite }),
+    /** Also decrements the day aggregate — see db/dictations.ts. */
+    remove: (id: number): Promise<boolean> => invoke(IPC.dictationsDelete, id),
     /** Fires after the capture loop saves, so History stays live. */
     onChanged: (cb: () => void): (() => void) => {
       const listener = () => cb()
       ipcRenderer.on(IPC_EVENT.dictationsChanged, listener)
       return () => ipcRenderer.off(IPC_EVENT.dictationsChanged, listener)
     },
+  },
+  dictionary: {
+    list: (): Promise<DictionaryDto[]> => invoke(IPC.dictionaryList),
+    create: (input: NewDictionaryDto): Promise<DictionaryWrite> =>
+      invoke(IPC.dictionaryCreate, input),
+    update: (id: number, input: NewDictionaryDto): Promise<DictionaryWrite> =>
+      invoke(IPC.dictionaryUpdate, { id, ...input }),
+    remove: (id: number): Promise<boolean> => invoke(IPC.dictionaryDelete, id),
+  },
+  clipboard: {
+    /** Main owns this: a file:// page has no `navigator.clipboard`. */
+    write: (text: string): Promise<void> => invoke(IPC.clipboardWrite, text),
   },
   apiKey: {
     status: (): Promise<ApiKeyStatus> => invoke(IPC.apiKeyStatus),

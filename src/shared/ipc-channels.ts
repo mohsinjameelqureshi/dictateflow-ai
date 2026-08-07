@@ -25,9 +25,22 @@ export const IPC = {
   /* microphone list, enumerated by the widget on behalf of Settings */
   devicesList: 'devices:list',
 
-  /* history — read paths land in Phase 3, the shape is fixed now */
+  /* history */
   dictationsList: 'dictations:list',
+  dictationsCount: 'dictations:count',
   dictationsCreate: 'dictations:create',
+  dictationsSetFavorite: 'dictations:setFavorite',
+  dictationsDelete: 'dictations:delete',
+
+  /* personal dictionary — ships in v1 (§9) */
+  dictionaryList: 'dictionary:list',
+  dictionaryCreate: 'dictionary:create',
+  dictionaryUpdate: 'dictionary:update',
+  dictionaryDelete: 'dictionary:delete',
+
+  /* Copy-to-clipboard for history. Goes through main because a file:// page
+     is not a secure context, so `navigator.clipboard` is unavailable there. */
+  clipboardWrite: 'clipboard:write',
 
   /* the Groq key. safeStorage only — never the settings table (§2). */
   apiKeyStatus: 'apiKey:status',

@@ -65,6 +65,43 @@ export interface ListDictationsQuery {
   favoritesOnly?: boolean
 }
 
+/* ---------------------------------------------------------- dictionary ---- */
+
+/** A personal dictionary rule. `createdAt` is epoch ms — IPC serialises. */
+export interface DictionaryDto {
+  id: number
+  from: string
+  to: string
+  hitCount: number
+  createdAt: number
+}
+
+export interface NewDictionaryDto {
+  from: string
+  to: string
+}
+
+/**
+ * Writes answer with a reason instead of rejecting.
+ *
+ * A rejected `ipcMain.handle` reaches the renderer wrapped in "Error invoking
+ * remote method…", which is not something §12 would let near a user. Expected
+ * failures — a duplicate term, an empty field — are values, not exceptions.
+ */
+export type DictionaryWrite =
+  | { ok: true; entry: DictionaryDto }
+  | { ok: false; problem: string }
+
+/** Shared by the form and the IPC handler, so the two cannot disagree. */
+export function validateRule(from: string, to: string): string | null {
+  if (!from.trim()) return 'Enter the word as it is heard.'
+  if (!to.trim()) return 'Enter what it should become.'
+  if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
+    return 'Those are the same. A rule needs something to change.'
+  }
+  return null
+}
+
 export interface AppInfo {
   version: string
   electron: string
@@ -156,7 +193,15 @@ export interface IpcMap {
   'settings:getAll': [void, Settings]
   'settings:set': [{ key: SettingKey; value: string }, void]
   'dictations:list': [ListDictationsQuery | undefined, DictationDto[]]
+  'dictations:count': [ListDictationsQuery | undefined, number]
   'dictations:create': [NewDictationDto, DictationDto]
+  'dictations:setFavorite': [{ id: number; favorite: boolean }, DictationDto | null]
+  'dictations:delete': [number, boolean]
+  'dictionary:list': [void, DictionaryDto[]]
+  'dictionary:create': [NewDictionaryDto, DictionaryWrite]
+  'dictionary:update': [{ id: number } & NewDictionaryDto, DictionaryWrite]
+  'dictionary:delete': [number, boolean]
+  'clipboard:write': [string, void]
   'apiKey:status': [void, ApiKeyStatus]
   'apiKey:set': [string, ApiKeyStatus]
   'apiKey:clear': [void, ApiKeyStatus]
@@ -173,7 +218,7 @@ export interface IpcMap {
  * Destinations in the main window. Settings is deliberately absent: it is a
  * separate window now, not a page here.
  */
-export type AppRoute = 'history' | 'insights'
+export type AppRoute = 'history' | 'insights' | 'dictionary'
 
 /** Channel -> payload for main-initiated pushes. See IPC_EVENT. */
 export interface IpcEventMap {

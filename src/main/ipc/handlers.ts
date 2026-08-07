@@ -1,7 +1,12 @@
-import { BrowserWindow, app, ipcMain } from 'electron'
-import { and, desc, eq, like, or } from 'drizzle-orm'
-import { getDb, schema } from '../../db/client.js'
-import { createDictation, toDto } from '../../db/dictations.js'
+import { BrowserWindow, app, clipboard, ipcMain } from 'electron'
+import {
+  countDictations,
+  createDictation,
+  deleteDictation,
+  listDictations,
+  setFavorite,
+} from '../../db/dictations.js'
+import { createRule, deleteRule, listDictionary, updateRule } from '../../db/dictionary.js'
 import { IPC } from '../../shared/ipc-channels.js'
 import {
   type ApiKeyStatus,
@@ -9,9 +14,12 @@ import {
   type AudioInputDevice,
   type ClipPayload,
   type DictationDto,
+  type DictionaryDto,
+  type DictionaryWrite,
   type IpcMap,
   type ListDictationsQuery,
   type NewDictationDto,
+  type NewDictionaryDto,
   type SettingKey,
   type Settings,
   type SettingsTab,
@@ -112,32 +120,51 @@ export function registerIpcHandlers(): void {
 
   /* ------------------------------------------------------ dictations ---- */
 
-  handle(IPC.dictationsList, (query: ListDictationsQuery | undefined): DictationDto[] => {
-    const { limit = 50, offset = 0, search, favoritesOnly } = query ?? {}
+  handle(IPC.dictationsList, (query: ListDictationsQuery | undefined): DictationDto[] =>
+    listDictations(query),
+  )
 
-    const filters = []
-    if (favoritesOnly) filters.push(eq(schema.dictations.favorite, true))
-    if (search && search.trim()) {
-      const term = `%${search.trim()}%`
-      // Search raw as well as final — raw is the source of truth (§4).
-      filters.push(
-        or(like(schema.dictations.finalText, term), like(schema.dictations.rawText, term)),
-      )
-    }
-
-    const rows = getDb()
-      .select()
-      .from(schema.dictations)
-      .where(filters.length ? and(...filters) : undefined)
-      .orderBy(desc(schema.dictations.createdAt))
-      .limit(limit)
-      .offset(offset)
-      .all()
-
-    return rows.map(toDto)
-  })
+  handle(IPC.dictationsCount, (query: ListDictationsQuery | undefined): number =>
+    countDictations(query),
+  )
 
   handle(IPC.dictationsCreate, (input: NewDictationDto): DictationDto => createDictation(input))
+
+  handle(
+    IPC.dictationsSetFavorite,
+    ({ id, favorite }: { id: number; favorite: boolean }): DictationDto | null =>
+      setFavorite(id, favorite),
+  )
+
+  handle(IPC.dictationsDelete, (id: number): boolean => deleteDictation(id))
+
+  /* ------------------------------------------------------ dictionary ---- */
+
+  handle(IPC.dictionaryList, (): DictionaryDto[] => listDictionary())
+
+  // No change event is pushed for these. Only the main window shows the
+  // dictionary, it is the window that just asked for the change, and the
+  // capture loop re-reads the rules from SQLite on every dictation — so
+  // there is nothing left holding a stale copy.
+  handle(IPC.dictionaryCreate, ({ from, to }: NewDictionaryDto): DictionaryWrite =>
+    createRule(from, to),
+  )
+
+  handle(
+    IPC.dictionaryUpdate,
+    ({ id, from, to }: { id: number } & NewDictionaryDto): DictionaryWrite =>
+      updateRule(id, from, to),
+  )
+
+  handle(IPC.dictionaryDelete, (id: number): boolean => deleteRule(id))
+
+  /* ------------------------------------------------------- clipboard ---- */
+
+  // §6.4's insert path snapshots and restores the clipboard around a paste.
+  // This is the unrelated, deliberate case: the user asked for the text.
+  handle(IPC.clipboardWrite, (text: string) => {
+    if (text) clipboard.writeText(text)
+  })
 
   /* ----------------------------------------------------------- misc ---- */
 
