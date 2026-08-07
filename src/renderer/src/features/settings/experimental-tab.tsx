@@ -1,5 +1,5 @@
-import { Row, Section, Toggle } from './parts.js'
-import type { SettingsStore } from './use-settings.js'
+import { Row, Section, Toggle } from "./parts.js";
+import type { SettingsStore } from "./use-settings.js";
 
 /**
  * Where a feature lives while it is still being judged.
@@ -19,15 +19,15 @@ export function ExperimentalTab({ settings, save }: SettingsStore) {
             only one that needs nothing but a suffix match on the transcript. */}
         <Row
           label="Press Enter command"
-          hint="Automatically press Enter when you say 'press enter' at the end of a dictation. Those words are removed from the text that gets typed — your raw transcript in History still has them."
+          hint="Automatically press Enter when you say 'press enter' at the end of a dictation. Those words are removed from the text that gets typed your raw transcript in History still has them."
         >
           <Toggle
             label="Press Enter command"
-            checked={settings?.pressEnterCommand === 'true'}
-            onChange={(next) => void save('pressEnterCommand', String(next))}
+            checked={settings?.pressEnterCommand === "true"}
+            onChange={(next) => void save("pressEnterCommand", String(next))}
           />
         </Row>
       </Section>
     </div>
-  )
+  );
 }

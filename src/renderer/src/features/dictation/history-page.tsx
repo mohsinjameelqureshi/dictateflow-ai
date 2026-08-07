@@ -1,10 +1,11 @@
 import { Search, Star } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button.js'
 import { Empty, Page } from '@/components/page.js'
 import { cn } from '@/lib/utils.js'
 import type { DictationDto } from '@shared/types.js'
 import { DictationCard } from './dictation-card.js'
+import { groupByDay } from './group-by-day.js'
 import { ShortcutHint } from './shortcut-hint.js'
 
 const PAGE = 50
@@ -77,6 +78,11 @@ export function HistoryPage() {
 
   const filtered = !!search || favoritesOnly
 
+  // Recomputed only when the rows change. "Today" is resolved at that moment,
+  // so a window left open across midnight keeps yesterday's labels until the
+  // next load — and the capture loop's own change event is a load.
+  const groups = useMemo(() => groupByDay(items), [items])
+
   return (
     <Page
       // Matches the nav label — a page headed "History" under a nav item
@@ -124,16 +130,30 @@ export function HistoryPage() {
         />
       ) : (
         <>
-          <ul className="flex flex-col gap-2">
-            {items.map((d) => (
-              <DictationCard
-                key={d.id}
-                dictation={d}
-                onToggleFavorite={toggleFavorite}
-                onDelete={remove}
-              />
-            ))}
-          </ul>
+          {groups.map(({ key, label, items: rows }) => (
+            <section key={key} className="mb-6 last:mb-0">
+              {/* Sticky, because the heading is what tells you where you are in
+                  a long list and it is useless once it has scrolled away.
+
+                  `-mx-10 px-10` is what makes it full-bleed: the page pads its
+                  content by 10, so without it the cards would slide past in
+                  the uncovered gutters on either side of the heading. */}
+              <h2 className="sticky top-0 z-10 -mx-10 bg-panel px-10 pb-2 pt-1 text-xs font-medium uppercase tracking-wide text-ink-subtle">
+                {label}
+              </h2>
+
+              <ul className="flex flex-col gap-2">
+                {rows.map((d) => (
+                  <DictationCard
+                    key={d.id}
+                    dictation={d}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={remove}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
 
           <div className="mt-5 flex items-center justify-center gap-4">
             <p className="text-xs tabular-nums text-ink-subtle">

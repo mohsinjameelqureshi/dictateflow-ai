@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Download, RefreshCw, TriangleAlert, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button.js'
+import { useCallback, useEffect, useState } from "react";
+import { Download, RefreshCw, TriangleAlert, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button.js";
 import {
   RETENTION_DAYS,
   formatBytes,
   type RecordingsStats,
   type TransferResult,
-} from '@shared/types.js'
-import { Row, Section, Select, Toggle } from './parts.js'
-import type { SettingsStore } from './use-settings.js'
+} from "@shared/types.js";
+import { Row, Section, Select, Toggle } from "./parts.js";
+import type { SettingsStore } from "./use-settings.js";
 
 /**
  * Export and import as JSON (§9).
@@ -18,68 +18,79 @@ import type { SettingsStore } from './use-settings.js'
  * already here rather than replacing it.
  */
 export function DataTab({ settings, save }: SettingsStore) {
-  const [busy, setBusy] = useState<'export' | 'import' | 'rebuild' | null>(null)
-  const [note, setNote] = useState<string | null>(null)
-  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState<"export" | "import" | "rebuild" | null>(
+    null,
+  );
+  const [note, setNote] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
-  const run = async (which: 'export' | 'import') => {
-    setBusy(which)
-    setNote(null)
-    setProblem(null)
+  const run = async (which: "export" | "import") => {
+    setBusy(which);
+    setNote(null);
+    setProblem(null);
     try {
       const result: TransferResult =
-        which === 'export' ? await window.wispr.data.export() : await window.wispr.data.import()
+        which === "export"
+          ? await window.wispr.data.export()
+          : await window.wispr.data.import();
 
       // Cancelling a file dialog is a normal thing to do, not an outcome that
       // needs reporting back.
-      if (result.status === 'cancelled') return
-      if (result.status === 'error') {
-        setProblem(result.problem)
-        return
+      if (result.status === "cancelled") return;
+      if (result.status === "error") {
+        setProblem(result.problem);
+        return;
       }
 
       setNote(
-        which === 'export'
-          ? `Saved ${count(result.dictations, 'transcript')} and ${count(
+        which === "export"
+          ? `Saved ${count(result.dictations, "transcript")} and ${count(
               result.dictionary,
-              'dictionary word',
+              "dictionary word",
             )}.`
-          : `Added ${count(result.dictations, 'transcript')} and ${count(
+          : `Added ${count(result.dictations, "transcript")} and ${count(
               result.dictionary,
-              'dictionary word',
-            )}${result.skipped > 0 ? `. Skipped ${result.skipped} already here` : ''}.`,
-      )
+              "dictionary word",
+            )}${result.skipped > 0 ? `. Skipped ${result.skipped} already here` : ""}.`,
+      );
     } catch {
-      setProblem('That did not finish. Nothing was changed.')
+      setProblem("That did not finish. Nothing was changed.");
     } finally {
-      setBusy(null)
+      setBusy(null);
     }
-  }
+  };
 
   const rebuild = async () => {
-    setBusy('rebuild')
-    setNote(null)
-    setProblem(null)
+    setBusy("rebuild");
+    setNote(null);
+    setProblem(null);
     try {
-      await window.wispr.insights.rebuild()
-      setNote('Statistics recalculated from your history.')
+      await window.wispr.insights.rebuild();
+      setNote("Statistics recalculated from your history.");
     } catch {
-      setProblem('Could not recalculate the statistics.')
+      setProblem("Could not recalculate the statistics.");
     } finally {
-      setBusy(null)
+      setBusy(null);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-4">
       <Section
         title="Backup"
-        description="Plain JSON — readable, and yours. Your Groq API key is never written to it; it stays encrypted by Windows."
+        description="Plain JSON readable, and yours. Your Groq API key is never written to it. It stays encrypted by Windows."
       >
-        <Row label="Export everything" hint="Transcripts, dictionary and settings, in one file.">
-          <Button variant="secondary" onClick={() => void run('export')} disabled={busy !== null}>
+        <Row
+          label="Export everything"
+          hint="Transcripts, dictionary and settings, in one file."
+        >
+          <Button
+            variant="secondary"
+            onClick={() => void run("export")}
+            disabled={busy !== null}
+          >
             <Download size={14} />
-            {busy === 'export' ? 'Exporting…' : 'Export'}
+            {busy === "export" ? "Exporting…" : "Export"}
           </Button>
         </Row>
 
@@ -87,9 +98,13 @@ export function DataTab({ settings, save }: SettingsStore) {
           label="Import a backup"
           hint="Adds to what is already here. Anything already present is skipped, so importing the same file twice is safe."
         >
-          <Button variant="secondary" onClick={() => void run('import')} disabled={busy !== null}>
+          <Button
+            variant="secondary"
+            onClick={() => void run("import")}
+            disabled={busy !== null}
+          >
             <Upload size={14} />
-            {busy === 'import' ? 'Importing…' : 'Import'}
+            {busy === "import" ? "Importing…" : "Import"}
           </Button>
         </Row>
       </Section>
@@ -101,8 +116,15 @@ export function DataTab({ settings, save }: SettingsStore) {
           label="Recalculate statistics"
           hint="Rebuilds the daily totals behind Insights from your transcripts. Nothing is deleted."
         >
-          <Button variant="secondary" onClick={() => void rebuild()} disabled={busy !== null}>
-            <RefreshCw size={14} className={busy === 'rebuild' ? 'animate-spin' : undefined} />
+          <Button
+            variant="secondary"
+            onClick={() => void rebuild()}
+            disabled={busy !== null}
+          >
+            <RefreshCw
+              size={14}
+              className={busy === "rebuild" ? "animate-spin" : undefined}
+            />
             Recalculate
           </Button>
         </Row>
@@ -116,15 +138,15 @@ export function DataTab({ settings, save }: SettingsStore) {
         </p>
       )}
     </div>
-  )
+  );
 }
 
 function count(n: number, noun: string): string {
-  return `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`
+  return `${n.toLocaleString()} ${noun}${n === 1 ? "" : "s"}`;
 }
 
 const retentionLabel = (days: number): string =>
-  days === 0 ? 'Keep everything' : `Delete after ${days} days`
+  days === 0 ? "Keep everything" : `Delete after ${days} days`;
 
 /**
  * Recordings on disk (§8).
@@ -133,41 +155,44 @@ const retentionLabel = (days: number): string =>
  * spoken minute this grows quietly, and a user meeting it for the first time
  * in Explorer is a user who has already lost trust in the app's housekeeping.
  */
-function Recordings({ settings, save }: Pick<SettingsStore, 'settings' | 'save'>) {
-  const [stats, setStats] = useState<RecordingsStats | null>(null)
-  const [confirming, setConfirming] = useState(false)
-  const [clearing, setClearing] = useState(false)
+function Recordings({
+  settings,
+  save,
+}: Pick<SettingsStore, "settings" | "save">) {
+  const [stats, setStats] = useState<RecordingsStats | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const refresh = useCallback(() => {
     void window.wispr.recordings
       .stats()
       .then(setStats)
-      .catch(() => setStats(null))
-  }, [])
+      .catch(() => setStats(null));
+  }, []);
 
-  useEffect(refresh, [refresh])
+  useEffect(refresh, [refresh]);
 
   // A confirmation left sitting on a destructive button is a trap.
   useEffect(() => {
-    if (!confirming) return
-    const t = setTimeout(() => setConfirming(false), 5000)
-    return () => clearTimeout(t)
-  }, [confirming])
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirming]);
 
   const clear = async () => {
-    setClearing(true)
+    setClearing(true);
     try {
-      setStats(await window.wispr.recordings.clear())
+      setStats(await window.wispr.recordings.clear());
     } catch {
-      refresh()
+      refresh();
     } finally {
-      setClearing(false)
-      setConfirming(false)
+      setClearing(false);
+      setConfirming(false);
     }
-  }
+  };
 
-  const keeping = settings?.keepRecordings !== 'false'
-  const empty = !stats || stats.files === 0
+  const keeping = settings?.keepRecordings !== "false";
+  const empty = !stats || stats.files === 0;
 
   return (
     <Section
@@ -180,21 +205,21 @@ function Recordings({ settings, save }: Pick<SettingsStore, 'settings' | 'save'>
       >
         <Toggle
           checked={keeping}
-          onChange={(next) => void save('keepRecordings', String(next))}
+          onChange={(next) => void save("keepRecordings", String(next))}
           label="Keep recordings"
         />
       </Row>
 
       <Row
         label="Automatic cleanup"
-        hint="Applied when the app starts. Favorites are never deleted automatically — favoriting is how you say keep this."
+        hint="Applied when the app starts. Favorites are never deleted automatically favoriting is how you say keep this."
         htmlFor="retention"
       >
         <Select
           id="retention"
-          value={settings?.recordingRetentionDays ?? '0'}
+          value={settings?.recordingRetentionDays ?? "0"}
           disabled={!keeping}
-          onChange={(next) => void save('recordingRetentionDays', next)}
+          onChange={(next) => void save("recordingRetentionDays", next)}
         >
           {RETENTION_DAYS.map((days) => (
             <option key={days} value={String(days)}>
@@ -208,14 +233,18 @@ function Recordings({ settings, save }: Pick<SettingsStore, 'settings' | 'save'>
         label="Storage used"
         hint={
           empty
-            ? 'Nothing stored yet.'
-            : `${count(stats.files, 'recording')}. Transcripts are kept — only the audio is removed.`
+            ? "Nothing stored yet."
+            : `${count(stats.files, "recording")}. Transcripts are kept only the audio is removed.`
         }
       >
         {confirming ? (
           <div className="flex items-center gap-1">
-            <Button variant="danger" onClick={() => void clear()} disabled={clearing}>
-              {clearing ? 'Deleting…' : 'Delete all'}
+            <Button
+              variant="danger"
+              onClick={() => void clear()}
+              disabled={clearing}
+            >
+              {clearing ? "Deleting…" : "Delete all"}
             </Button>
             <Button variant="ghost" onClick={() => setConfirming(false)}>
               Keep
@@ -226,12 +255,16 @@ function Recordings({ settings, save }: Pick<SettingsStore, 'settings' | 'save'>
             <span className="text-sm tabular-nums text-ink">
               {formatBytes(stats?.bytes ?? 0)}
             </span>
-            <Button variant="secondary" onClick={() => setConfirming(true)} disabled={empty}>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirming(true)}
+              disabled={empty}
+            >
               Delete all
             </Button>
           </div>
         )}
       </Row>
     </Section>
-  )
+  );
 }
