@@ -4,11 +4,9 @@ import { getDb, schema } from '../../db/client.js'
 import { createDictation } from '../../db/dictations.js'
 import { IPC_EVENT } from '../../shared/ipc-channels.js'
 import {
-  DEFAULT_SETTINGS,
   MIN_CLIP_MS,
   MIN_CLIP_PEAK,
   type ClipPayload,
-  type Settings,
   type WidgetState,
 } from '../../shared/types.js'
 import { getSpeechProvider } from '../../services/speech/index.js'
@@ -21,6 +19,7 @@ import {
 import { insertText } from '../insert/clipboard.js'
 import { captureTarget, type InsertTarget } from '../insert/target.js'
 import { getApiKey } from '../secrets.js'
+import { readSettings } from '../settings.js'
 import { getWidgetWindow, hideWidget, sendToWidget, showWidget } from '../windows/widget-window.js'
 
 /**
@@ -286,11 +285,6 @@ class DictationSession {
 }
 
 /* ------------------------------------------------------------ helpers ---- */
-
-function readSettings(): Settings {
-  const rows = getDb().select().from(schema.settings).all()
-  return { ...DEFAULT_SETTINGS, ...Object.fromEntries(rows.map((r) => [r.key, r.value])) }
-}
 
 function readDictionary(): DictionaryRule[] {
   return getDb()

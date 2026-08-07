@@ -4,9 +4,9 @@ import { getDb, schema } from '../../db/client.js'
 import { createDictation, toDto } from '../../db/dictations.js'
 import { IPC } from '../../shared/ipc-channels.js'
 import {
-  DEFAULT_SETTINGS,
   type ApiKeyStatus,
   type AppInfo,
+  type AudioInputDevice,
   type ClipPayload,
   type DictationDto,
   type IpcMap,
@@ -14,10 +14,14 @@ import {
   type NewDictationDto,
   type SettingKey,
   type Settings,
+  type SettingsTab,
 } from '../../shared/types.js'
 import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
+import { listAudioInputs, receiveAudioInputs } from '../audio/devices.js'
 import { session } from '../dictation/session.js'
-import { onShortcutChanged } from '../shortcut/index.js'
+import { readSettings, writeSetting } from '../settings.js'
+import { onShortcutChanged, setShortcutSuspended } from '../shortcut/index.js'
+import { openSettingsWindow } from '../windows/settings-window.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -56,22 +60,29 @@ export function registerIpcHandlers(): void {
 
   /* -------------------------------------------------------- settings ---- */
 
-  handle(IPC.settingsGetAll, (): Settings => {
-    const rows = getDb().select().from(schema.settings).all()
-    const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]))
-    return { ...DEFAULT_SETTINGS, ...stored }
-  })
+  handle(IPC.settingsGetAll, (): Settings => readSettings())
 
   handle(IPC.settingsSet, ({ key, value }: { key: SettingKey; value: string }) => {
-    getDb()
-      .insert(schema.settings)
-      .values({ key, value })
-      .onConflictDoUpdate({ target: schema.settings.key, set: { value } })
-      .run()
-
-    // The global hook holds a parsed combo, so it has to be told.
-    if (key === 'shortcut') onShortcutChanged(value)
+    writeSetting(key, value)
+    applySettingEffect(key, value)
   })
+
+  handle(IPC.settingsOpen, (tab: SettingsTab | undefined) => {
+    openSettingsWindow(tab)
+  })
+
+  /* -------------------------------------------------------- shortcut ---- */
+
+  // Held only while the settings window is recording a combo, so the OLD
+  // shortcut cannot fire a dictation the moment the user presses it to show
+  // what they are replacing.
+  handle(IPC.shortcutSuspend, (suspended: boolean) => {
+    setShortcutSuspended(suspended)
+  })
+
+  /* --------------------------------------------------------- devices ---- */
+
+  handle(IPC.devicesList, (): Promise<AudioInputDevice[]> => listAudioInputs())
 
   /* --------------------------------------------------------- api key ---- */
 
@@ -88,6 +99,16 @@ export function registerIpcHandlers(): void {
   handle(IPC.widgetMicError, (error: { name: string; message: string }) => {
     session.micError(error.message)
   })
+
+  // The widget answering a `devices:list` that Settings asked for. It is the
+  // only renderer holding media permission, so it is the only one that sees
+  // device labels rather than empty strings (§6.7).
+  handle(
+    IPC.widgetDevices,
+    ({ requestId, devices }: { requestId: number; devices: AudioInputDevice[] }) => {
+      receiveAudioInputs(requestId, devices)
+    },
+  )
 
   /* ------------------------------------------------------ dictations ---- */
 
@@ -131,4 +152,32 @@ export function registerIpcHandlers(): void {
       dbPath: app.getPath('userData'),
     }),
   )
+}
+
+/**
+ * Settings that are not just a stored string.
+ *
+ * A toggle that writes a row and changes nothing is worse than no toggle: it
+ * reads as working. Anything added to SETTING_KEYS with real behaviour behind
+ * it belongs here.
+ */
+function applySettingEffect(key: SettingKey, value: string): void {
+  switch (key) {
+    case 'shortcut':
+      // The hook holds a parsed combo, so it has to be told.
+      onShortcutChanged(value)
+      return
+    case 'launchOnStartup':
+      applyLoginItem(value === 'true')
+      return
+    default:
+      // `microphoneId`, `language` and friends are read at the point of use.
+      return
+  }
+}
+
+export function applyLoginItem(openAtLogin: boolean): void {
+  // Dev runs would register the Electron binary itself as a startup item.
+  if (!app.isPackaged) return
+  app.setLoginItemSettings({ openAtLogin, path: process.execPath })
 }

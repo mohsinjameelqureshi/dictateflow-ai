@@ -15,6 +15,15 @@ export const IPC = {
   /* settings */
   settingsGetAll: 'settings:getAll',
   settingsSet: 'settings:set',
+  /** Settings lives in its own window; this is how anything asks for it. */
+  settingsOpen: 'settings:open',
+
+  /* Pauses the global hook while the user records a new combo, so the OLD
+     shortcut cannot start a dictation mid-rebind. */
+  shortcutSuspend: 'shortcut:suspend',
+
+  /* microphone list, enumerated by the widget on behalf of Settings */
+  devicesList: 'devices:list',
 
   /* history — read paths land in Phase 3, the shape is fixed now */
   dictationsList: 'dictations:list',
@@ -29,6 +38,7 @@ export const IPC = {
      everything else. Both directions are enumerated here. */
   widgetClip: 'widget:clip',
   widgetMicError: 'widget:micError',
+  widgetDevices: 'widget:devices',
 
   /* diagnostics */
   appInfo: 'app:info',
@@ -43,10 +53,14 @@ export const IPC_EVENT = {
   widgetCommand: 'widget:command',
   /** main -> widget: which of the nine states to render (§11) */
   widgetState: 'widget:state',
+  /** main -> widget: list the audio inputs and reply on `widget:devices` */
+  widgetEnumerate: 'widget:enumerate',
   /** main -> main window: history changed, reload it */
   dictationsChanged: 'dictations:changed',
   /** main -> main window: the tray asked for a page */
   navigate: 'app:navigate',
+  /** main -> settings window: select a tab */
+  settingsNavigate: 'settings:navigate',
 } as const
 
 /**

@@ -129,6 +129,21 @@ export interface ApiKeyStatus {
   encryptionAvailable: boolean
 }
 
+/* ----------------------------------------------------------- settings ---- */
+
+/** Tabs in the settings window's own sidebar. */
+export type SettingsTab = 'general' | 'transcription' | 'about'
+
+/**
+ * A microphone, as offered to the picker. Enumerated by the widget renderer —
+ * it is the only surface holding media permission (§6.7), so it is the only
+ * one that sees device labels rather than empty strings.
+ */
+export interface AudioInputDevice {
+  deviceId: string
+  label: string
+}
+
 /**
  * Channel -> [request, response]. This is what makes the preload bridge
  * type-safe end to end.
@@ -147,18 +162,27 @@ export interface IpcMap {
   'apiKey:clear': [void, ApiKeyStatus]
   'widget:clip': [ClipPayload, void]
   'widget:micError': [{ name: string; message: string }, void]
+  'widget:devices': [{ requestId: number; devices: AudioInputDevice[] }, void]
+  'devices:list': [void, AudioInputDevice[]]
+  'settings:open': [SettingsTab | undefined, void]
+  'shortcut:suspend': [boolean, void]
   'app:info': [void, AppInfo]
 }
 
-/** The three destinations in the main window. The tray can request one. */
-export type AppRoute = 'history' | 'insights' | 'settings'
+/**
+ * Destinations in the main window. Settings is deliberately absent: it is a
+ * separate window now, not a page here.
+ */
+export type AppRoute = 'history' | 'insights'
 
 /** Channel -> payload for main-initiated pushes. See IPC_EVENT. */
 export interface IpcEventMap {
   'widget:command': WidgetCommand
   'widget:state': WidgetStatePayload
+  'widget:enumerate': { requestId: number }
   'dictations:changed': void
   'app:navigate': AppRoute
+  'settings:navigate': SettingsTab
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */

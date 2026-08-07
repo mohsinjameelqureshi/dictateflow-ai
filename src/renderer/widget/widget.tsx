@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Ban, Check, Loader2, Mic, MicOff, TimerReset, TriangleAlert, WifiOff } from 'lucide-react'
 import type { WidgetState, WidgetStatePayload } from '@shared/types.js'
+import { listAudioInputs } from './devices.js'
 import { Recorder } from './recorder.js'
 import { Waveform } from './waveform.js'
 
@@ -70,6 +71,18 @@ export function Widget() {
   }, [recorder])
 
   useEffect(() => window.wisprWidget.onState(setPayload), [])
+
+  // Settings asks for the microphone list through here. Answering always —
+  // even on failure — is what keeps the picker from sitting on a 5s timeout.
+  useEffect(
+    () =>
+      window.wisprWidget.onEnumerate(({ requestId }) => {
+        void listAudioInputs(!recorder.recording)
+          .catch(() => [])
+          .then((devices) => window.wisprWidget.sendDevices(requestId, devices))
+      }),
+    [recorder],
+  )
 
   useEffect(
     () =>

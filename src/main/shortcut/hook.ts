@@ -37,6 +37,7 @@ export class ShortcutHook {
   #combo: Set<number>
   #held = false
   #started = false
+  #suspended = false
 
   constructor(
     shortcut: string,
@@ -57,6 +58,27 @@ export class ShortcutHook {
     this.#combo = next
   }
 
+  /**
+   * Deafen the hook without unhooking it.
+   *
+   * The settings window records a new combo by listening for real key presses,
+   * and the OLD combo is still armed while it does — without this, rebinding
+   * away from Ctrl+Win starts a dictation the moment the user presses Ctrl+Win
+   * to demonstrate what they are replacing.
+   */
+  setSuspended(suspended: boolean): void {
+    if (this.#suspended === suspended) return
+    this.#suspended = suspended
+
+    // Keys pressed while deafened were never recorded, so the map is stale
+    // either way; drop it rather than trust it.
+    this.#down.clear()
+    if (this.#held) {
+      this.#held = false
+      this.handlers.onCancel()
+    }
+  }
+
   #satisfied(): boolean {
     if (this.#combo.size === 0) return false
     for (const code of this.#combo) if (!this.#down.has(code)) return false
@@ -68,6 +90,8 @@ export class ShortcutHook {
     this.#started = true
 
     uIOhook.on('keydown', (e) => {
+      if (this.#suspended) return
+
       // Auto-repeat fires keydown continuously while a key is held. The Set
       // makes that idempotent; `#held` is what actually guards the callback.
       this.#down.add(e.keycode)
@@ -90,6 +114,7 @@ export class ShortcutHook {
     })
 
     uIOhook.on('keyup', (e) => {
+      if (this.#suspended) return
       this.#down.delete(e.keycode)
 
       // Stop as soon as the combo is broken, not only when every key is up.

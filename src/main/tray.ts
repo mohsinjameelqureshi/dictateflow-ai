@@ -1,8 +1,8 @@
 import { BrowserWindow, Menu, Tray, app, nativeImage } from 'electron'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { IPC_EVENT } from '../shared/ipc-channels.js'
-import { createMainWindow } from './windows/main-window.js'
+import { createMainWindow, getMainWindow } from './windows/main-window.js'
+import { openSettingsWindow } from './windows/settings-window.js'
 
 /**
  * System tray: Open / Settings / Quit (§9).
@@ -25,15 +25,18 @@ function icon() {
   return nativeImage.createEmpty()
 }
 
+/**
+ * The main window is named explicitly rather than found by scanning windows.
+ * With Settings now a window of its own, "the first focusable window" is a
+ * coin toss.
+ */
 function focusMain(): BrowserWindow {
-  const existing = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && w.isFocusable())
-  if (existing) {
-    if (existing.isMinimized()) existing.restore()
-    existing.show()
-    existing.focus()
-    return existing
-  }
-  return createMainWindow()
+  const win = getMainWindow() ?? createMainWindow()
+  if (win.isMinimized()) win.restore()
+  // It may be hidden rather than destroyed — that is what minimizeToTray does.
+  win.show()
+  win.focus()
+  return win
 }
 
 export function createTray(): Tray {
@@ -44,13 +47,9 @@ export function createTray(): Tray {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open', click: () => focusMain() },
-      {
-        label: 'Settings',
-        click: () => {
-          const win = focusMain()
-          win.webContents.send(IPC_EVENT.navigate, 'settings')
-        },
-      },
+      // Settings is its own window now, so the tray opens it directly instead
+      // of routing a navigation through the main window.
+      { label: 'Settings', click: () => openSettingsWindow() },
       { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
     ]),

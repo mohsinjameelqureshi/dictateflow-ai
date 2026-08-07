@@ -1,0 +1,88 @@
+import { useCallback, useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button.js'
+import type { AudioInputDevice } from '@shared/types.js'
+import { Select } from './parts.js'
+
+/**
+ * The microphone picker.
+ *
+ * The list comes from the widget, not from this window — §6.7 grants media
+ * permission to the widget alone, and without it `enumerateDevices` returns
+ * entries with empty labels. See main/audio/devices.ts.
+ *
+ * An empty stored value means "whatever Windows considers default", which is
+ * also what an unplugged microphone should fall back to.
+ */
+export function MicrophoneField({
+  value,
+  onSave,
+}: {
+  value: string
+  onSave: (deviceId: string) => void
+}) {
+  const [devices, setDevices] = useState<AudioInputDevice[] | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setDevices(await window.wispr.devices.list())
+    } catch {
+      setDevices([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  // A microphone that was chosen once and has since been unplugged. Saying so
+  // beats a select that silently shows the wrong device as selected — which is
+  // what happens if the stored id matches no option, so one is kept for it.
+  const unlisted = !!value && !devices?.some((d) => d.deviceId === value)
+  const missing = unlisted && devices !== null
+
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-2">
+        <Select
+          id="microphone"
+          value={value}
+          onChange={onSave}
+          disabled={loading && devices === null}
+        >
+          <option value="">System default</option>
+          {devices?.map((d) => (
+            <option key={d.deviceId} value={d.deviceId}>
+              {d.label}
+            </option>
+          ))}
+          {unlisted && <option value={value}>{missing ? 'Not connected' : 'Loading…'}</option>}
+        </Select>
+
+        <Button
+          size="icon"
+          variant="secondary"
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label="Refresh microphone list"
+          title="Refresh"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />
+        </Button>
+      </div>
+
+      {missing && (
+        <p className="text-right text-[13px] text-danger">
+          That microphone is not connected. Dictation will use the system default.
+        </p>
+      )}
+      {devices?.length === 0 && !missing && (
+        <p className="text-right text-[13px] text-ink-muted">No microphones found.</p>
+      )}
+    </div>
+  )
+}

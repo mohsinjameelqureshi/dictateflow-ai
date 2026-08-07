@@ -53,9 +53,10 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/renderer/index.html'),
-          // The widget is a second entry point (§7) — a different window with
-          // different rules, not a route inside the main one.
+          // The widget and settings are separate entry points (§7) — different
+          // windows with different rules, not routes inside the main one.
           widget: resolve('src/renderer/widget.html'),
+          settings: resolve('src/renderer/settings.html'),
         },
       },
     },

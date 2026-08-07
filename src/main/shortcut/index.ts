@@ -1,7 +1,5 @@
-import { getDb, schema } from '../../db/client.js'
-import { eq } from 'drizzle-orm'
-import { DEFAULT_SETTINGS } from '../../shared/types.js'
 import { session } from '../dictation/session.js'
+import { readSetting } from '../settings.js'
 import { ShortcutHook } from './hook.js'
 
 /**
@@ -12,19 +10,10 @@ import { ShortcutHook } from './hook.js'
  */
 let hook: ShortcutHook | null = null
 
-function storedShortcut(): string {
-  const row = getDb()
-    .select()
-    .from(schema.settings)
-    .where(eq(schema.settings.key, 'shortcut'))
-    .get()
-  return row?.value ?? DEFAULT_SETTINGS.shortcut
-}
-
 export function startShortcut(): void {
   if (hook) return
 
-  hook = new ShortcutHook(storedShortcut(), {
+  hook = new ShortcutHook(readSetting('shortcut'), {
     onPress: () => void session.begin(),
     onRelease: () => void session.finish(),
     onCancel: () => session.cancel(),
@@ -35,6 +24,11 @@ export function startShortcut(): void {
 
 export function onShortcutChanged(shortcut: string): void {
   hook?.setShortcut(shortcut)
+}
+
+/** Held only while the settings window is recording a new combo. */
+export function setShortcutSuspended(suspended: boolean): void {
+  hook?.setSuspended(suspended)
 }
 
 export function stopShortcut(): void {

@@ -1,14 +1,39 @@
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
+import { readFlag } from '../settings.js'
 
 /**
  * The main window. Frameless with a custom title bar (§12) — default Windows
  * chrome makes it feel like a web page in a box.
  *
  * Note this is NOT the widget. The widget (Phase 2) has different rules:
- * focusable:false, transparent, always-on-top. See §6.2.
+ * focusable:false, transparent, always-on-top. See §6.2. Settings is a third
+ * window again — see settings-window.ts.
  */
+
+let main: BrowserWindow | null = null
+
+/**
+ * Set once the tray's Quit is on its way. Without it, hide-on-close would
+ * veto the close that `app.quit()` issues and the app could never exit.
+ */
+let quitting = false
+app.on('before-quit', () => {
+  quitting = true
+})
+
+/**
+ * There are three windows now, so "the main window" can no longer be inferred
+ * from `getAllWindows()`. The tray needs to name it exactly.
+ */
+export function getMainWindow(): BrowserWindow | null {
+  return main && !main.isDestroyed() ? main : null
+}
+
 export function createMainWindow(): BrowserWindow {
+  const existing = getMainWindow()
+  if (existing) return existing
+
   const win = new BrowserWindow({
     width: 1100,
     height: 720,
@@ -42,9 +67,23 @@ export function createMainWindow(): BrowserWindow {
     return { action: 'deny' }
   })
 
+  // Closing NEVER quits, either way — the global hook is the primary interface
+  // and quitting here would silently disable dictation (§9). The setting only
+  // decides whether the window is kept loaded or torn down and rebuilt.
+  win.on('close', (event) => {
+    if (quitting || !readFlag('minimizeToTray')) return
+    event.preventDefault()
+    win.hide()
+  })
+
+  win.on('closed', () => {
+    main = null
+  })
+
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) void win.loadURL(devUrl)
   else void win.loadFile(join(__dirname, '../renderer/index.html'))
 
+  main = win
   return win
 }

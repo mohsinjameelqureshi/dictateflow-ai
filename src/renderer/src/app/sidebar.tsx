@@ -1,10 +1,9 @@
 import { BarChart3, History, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils.js'
-
-export type Route = 'history' | 'insights' | 'settings'
+import type { AppRoute } from '@shared/types.js'
 
 interface Item {
-  id: Route
+  id: AppRoute
   label: string
   icon: LucideIcon
 }
@@ -12,20 +11,30 @@ interface Item {
 const ITEMS: Item[] = [
   { id: 'history', label: 'History', icon: History },
   { id: 'insights', label: 'Insights', icon: BarChart3 },
-  { id: 'settings', label: 'Settings', icon: Settings },
 ]
+
+const itemClass = (active: boolean) =>
+  cn(
+    'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
+    active
+      ? 'bg-accent-soft font-medium text-accent'
+      : 'text-ink-muted hover:bg-line-soft hover:text-ink',
+  )
 
 /**
  * §12 — icon + label, subtle active state. The nav list is deliberately short
  * and top-aligned: Dictionary, Snippets and Style get added here later
  * without a redesign.
+ *
+ * Settings sits apart at the bottom because it is not a destination in this
+ * window — it opens a window of its own.
  */
 export function Sidebar({
   route,
   onNavigate,
 }: {
-  route: Route
-  onNavigate: (r: Route) => void
+  route: AppRoute
+  onNavigate: (r: AppRoute) => void
 }) {
   return (
     <nav
@@ -39,18 +48,21 @@ export function Sidebar({
             key={id}
             onClick={() => onNavigate(id)}
             aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors',
-              active
-                ? 'bg-accent-soft font-medium text-accent'
-                : 'text-ink-muted hover:bg-line-soft hover:text-ink',
-            )}
+            className={itemClass(active)}
           >
             <Icon size={16} strokeWidth={2} />
             {label}
           </button>
         )
       })}
+
+      <button
+        onClick={() => void window.wispr.settings.open()}
+        className={cn(itemClass(false), 'mt-auto')}
+      >
+        <Settings size={16} strokeWidth={2} />
+        Settings
+      </button>
     </nav>
   )
 }

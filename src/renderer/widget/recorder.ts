@@ -57,6 +57,38 @@ function encodeWav(frames: Float32Array[], sampleRate: number): Uint8Array {
   return new Uint8Array(buf)
 }
 
+const CONSTRAINTS: MediaTrackConstraints = {
+  channelCount: 1,
+  sampleRate: TARGET_RATE,
+  echoCancellation: true,
+  // Gates the noise floor BEFORE AGC can lift it. This is what keeps the 0.01
+  // peak guard working — see spikes/README.md.
+  noiseSuppression: true,
+  autoGainControl: true,
+}
+
+/**
+ * `exact` is deliberate — a chosen microphone should be used or nothing — but
+ * a device that has been unplugged since it was picked would then fail every
+ * dictation until the user opened Settings. Fall back to the system default
+ * instead, which is what the picker already tells them will happen.
+ */
+async function openStream(deviceId: string): Promise<MediaStream> {
+  if (!deviceId) return navigator.mediaDevices.getUserMedia({ audio: CONSTRAINTS })
+
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: { ...CONSTRAINTS, deviceId: { exact: deviceId } },
+    })
+  } catch (err) {
+    const name = err instanceof Error ? err.name : ''
+    // Only "that device is gone" retries. NotAllowedError is a permission
+    // problem and must surface, not be papered over with a different mic.
+    if (name !== 'OverconstrainedError' && name !== 'NotFoundError') throw err
+    return navigator.mediaDevices.getUserMedia({ audio: CONSTRAINTS })
+  }
+}
+
 export class Recorder {
   #ctx: AudioContext | null = null
   #workletReady: Promise<void> | null = null
@@ -70,6 +102,11 @@ export class Recorder {
 
   constructor(private onLevel: (rms: number) => void) {}
 
+  /** Device enumeration reads this before opening a probe stream. */
+  get recording(): boolean {
+    return this.#recording
+  }
+
   /**
    * Build the AudioContext and compile the worklet without touching the
    * microphone. spikes/README.md measured 38–74ms of audio lost to graph
@@ -82,9 +119,17 @@ export class Recorder {
     this.#ctx = new AudioContext({ sampleRate: TARGET_RATE })
     // Autoplay policy suspends a fresh context; it resumes on start().
     const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'text/javascript' }))
-    this.#workletReady = this.#ctx.audioWorklet.addModule(url).finally(() => {
-      URL.revokeObjectURL(url)
-    })
+    this.#workletReady = this.#ctx.audioWorklet
+      .addModule(url)
+      .catch((err: unknown) => {
+        // Never cache the rejection: start() awaits this same promise, so a
+        // one-off failure would otherwise be permanent for the widget's life.
+        this.#workletReady = null
+        throw err
+      })
+      .finally(() => {
+        URL.revokeObjectURL(url)
+      })
     return this.#workletReady
   }
 
@@ -97,18 +142,7 @@ export class Recorder {
     if (!ctx) throw new Error('AudioContext unavailable')
     if (ctx.state === 'suspended') await ctx.resume()
 
-    this.#stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-        channelCount: 1,
-        sampleRate: TARGET_RATE,
-        echoCancellation: true,
-        // Gates the noise floor BEFORE AGC can lift it. This is what keeps
-        // the 0.01 peak guard working — see spikes/README.md.
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    })
+    this.#stream = await openStream(deviceId)
 
     this.#source = ctx.createMediaStreamSource(this.#stream)
     this.#node = new AudioWorkletNode(ctx, 'tap')

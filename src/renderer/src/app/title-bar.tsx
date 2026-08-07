@@ -8,13 +8,22 @@ import { cn } from '@/lib/utils.js'
  *
  * Windows control order is minimise / maximise / close, left to right — do
  * not "tidy" it into macOS order.
+ *
+ * Shared with the settings window, which is not resizable — a maximise button
+ * that does nothing is worse than one that is absent.
  */
-export function TitleBar() {
+export function TitleBar({
+  title = 'Wispr AI',
+  maximizable = true,
+}: {
+  title?: string
+  maximizable?: boolean
+} = {}) {
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
-    void window.wispr.window.isMaximized().then(setMaximized)
-  }, [])
+    if (maximizable) void window.wispr.window.isMaximized().then(setMaximized)
+  }, [maximizable])
 
   const controls = [
     {
@@ -23,12 +32,16 @@ export function TitleBar() {
       onClick: () => void window.wispr.window.minimize(),
       danger: false,
     },
-    {
-      label: maximized ? 'Restore' : 'Maximize',
-      icon: maximized ? Copy : Square,
-      onClick: () => void window.wispr.window.maximize().then(setMaximized),
-      danger: false,
-    },
+    ...(maximizable
+      ? [
+          {
+            label: maximized ? 'Restore' : 'Maximize',
+            icon: maximized ? Copy : Square,
+            onClick: () => void window.wispr.window.maximize().then(setMaximized),
+            danger: false,
+          },
+        ]
+      : []),
     {
       label: 'Close',
       icon: X,
@@ -39,7 +52,7 @@ export function TitleBar() {
 
   return (
     <header className="drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface pl-5">
-      <span className="text-[13px] font-medium tracking-tight text-ink-muted">Wispr AI</span>
+      <span className="text-[13px] font-medium tracking-tight text-ink-muted">{title}</span>
 
       <div className="no-drag flex h-full">
         {controls.map(({ label, icon: Icon, onClick, danger }) => (

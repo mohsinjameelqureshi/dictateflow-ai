@@ -1,6 +1,11 @@
 import { ipcRenderer } from 'electron'
 import { IPC, IPC_EVENT } from '../shared/ipc-channels.js'
-import type { ClipPayload, WidgetCommand, WidgetStatePayload } from '../shared/types.js'
+import type {
+  AudioInputDevice,
+  ClipPayload,
+  WidgetCommand,
+  WidgetStatePayload,
+} from '../shared/types.js'
 
 /**
  * The widget's surface. Deliberately much smaller than the main window's —
@@ -28,6 +33,21 @@ export const widgetApi = {
 
   reportMicError: (error: { name: string; message: string }): Promise<void> =>
     ipcRenderer.invoke(IPC.widgetMicError, error) as Promise<void>,
+
+  /**
+   * Settings needs the microphone list, and device LABELS are only visible to
+   * a renderer holding media permission — which §6.7 grants to the widget
+   * alone. So the request is relayed here rather than the permission widened
+   * to a window that also has database and API-key access.
+   */
+  onEnumerate: (cb: (request: { requestId: number }) => void): (() => void) => {
+    const listener = (_e: unknown, request: { requestId: number }) => cb(request)
+    ipcRenderer.on(IPC_EVENT.widgetEnumerate, listener)
+    return () => ipcRenderer.off(IPC_EVENT.widgetEnumerate, listener)
+  },
+
+  sendDevices: (requestId: number, devices: AudioInputDevice[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.widgetDevices, { requestId, devices }) as Promise<void>,
 } as const
 
 export type WidgetApi = typeof widgetApi

@@ -4,12 +4,14 @@ import type {
   ApiKeyStatus,
   AppInfo,
   AppRoute,
+  AudioInputDevice,
   DictationDto,
   IpcMap,
   ListDictationsQuery,
   NewDictationDto,
   SettingKey,
   Settings,
+  SettingsTab,
 } from '../shared/types.js'
 
 /** Typed invoke — the channel decides both argument and return type. */
@@ -34,6 +36,26 @@ export const mainApi = {
   settings: {
     getAll: (): Promise<Settings> => invoke(IPC.settingsGetAll),
     set: (key: SettingKey, value: string): Promise<void> => invoke(IPC.settingsSet, { key, value }),
+    /** Settings is its own window — this is how the main window asks for it. */
+    open: (tab?: SettingsTab): Promise<void> => invoke(IPC.settingsOpen, tab),
+    /** The tray can request a tab once the window is already up. */
+    onNavigate: (cb: (tab: SettingsTab) => void): (() => void) => {
+      const listener = (_e: unknown, tab: SettingsTab) => cb(tab)
+      ipcRenderer.on(IPC_EVENT.settingsNavigate, listener)
+      return () => ipcRenderer.off(IPC_EVENT.settingsNavigate, listener)
+    },
+  },
+  shortcut: {
+    /**
+     * Deafen the global hook while a new combo is being recorded. Every
+     * caller must guarantee the matching `false`, including on unmount —
+     * a stuck `true` disables dictation with no visible cause.
+     */
+    suspend: (suspended: boolean): Promise<void> => invoke(IPC.shortcutSuspend, suspended),
+  },
+  devices: {
+    /** Microphones, with real labels — relayed through the widget. */
+    list: (): Promise<AudioInputDevice[]> => invoke(IPC.devicesList),
   },
   dictations: {
     list: (query?: ListDictationsQuery): Promise<DictationDto[]> =>

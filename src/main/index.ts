@@ -1,6 +1,7 @@
 import { BrowserWindow, app, session as electronSession } from 'electron'
 import { closeDb, initDb } from '../db/client.js'
-import { registerIpcHandlers } from './ipc/handlers.js'
+import { applyLoginItem, registerIpcHandlers } from './ipc/handlers.js'
+import { readFlag } from './settings.js'
 import { startShortcut, stopShortcut } from './shortcut/index.js'
 import { createTray } from './tray.js'
 import { createMainWindow } from './windows/main-window.js'
@@ -30,7 +31,10 @@ if (!app.requestSingleInstanceLock()) {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             dev
-              ? "default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws: http://localhost:*"
+              ? // `blob:` in script-src/worker-src is load-bearing, not cosmetic:
+                // the AudioWorklet module is a Blob URL, and an explicit
+                // script-src overrides default-src for it.
+                "default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' ws: http://localhost:*"
               : // `blob:` in script-src is for the AudioWorklet, which is
                 // loaded from a Blob URL (worklets are governed by script-src).
                 // Nothing remote is ever loaded — the Groq call happens in the
@@ -59,6 +63,10 @@ if (!app.requestSingleInstanceLock()) {
 
     initDb()
     registerIpcHandlers()
+
+    // Reconcile the OS login item with what the settings table says, so the
+    // toggle is self-healing if the two ever drift.
+    applyLoginItem(readFlag('launchOnStartup'))
 
     // The widget is created once and hidden between dictations, so its
     // AudioContext and worklet stay warm (§11, spikes/README.md).
