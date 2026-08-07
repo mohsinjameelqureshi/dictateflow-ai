@@ -18,7 +18,8 @@ import {
 } from '../../services/enhance/dictionary.js'
 import { writeRecording, type WrittenRecording } from '../audio/store.js'
 import { broadcastDictationsChanged } from '../broadcast.js'
-import { insertText } from '../insert/clipboard.js'
+import { insertText, pressEnter } from '../insert/clipboard.js'
+import { parsePressEnter } from '../insert/commands.js'
 import { captureTarget, type InsertTarget } from '../insert/target.js'
 import { getApiKey } from '../secrets.js'
 import { readSettings } from '../settings.js'
@@ -222,6 +223,16 @@ class DictationSession {
     const replaced = applyDictionary(rawText, rules)
     bumpHitCounts(replaced.hitIds)
 
+    // Last transform before the text leaves, and deliberately so: the command
+    // has to be matched against the words that are actually about to be typed,
+    // after the dictionary has had its say. Off unless the user turned it on
+    // in Experimental.
+    //
+    // `command.text` is what gets inserted and stored as finalText, so a fired
+    // command is visible as the difference between raw and final in history —
+    // rawText still has "press enter" in it, because it was said.
+    const command = parsePressEnter(replaced.text, settings.pressEnterCommand === 'true')
+
     // §8 — the file is written HERE, past every guard that can still decide no
     // row gets created. Everything below this line persists on all three of its
     // exits, so there is no path where a clip is kept for a session that
@@ -236,21 +247,24 @@ class DictationSession {
     const blocked = this.#target ? await this.#target.elevated : false
     if (this.#phase !== 'working') return // cancelled while the probe finished
     if (blocked) {
-      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
+      persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
       this.#settle('blocked')
       return
     }
 
     this.#state('inserting')
     try {
-      await insertText(replaced.text, Number(settings.typingDelayMs))
+      // Empty when the whole utterance was the command — insertText returns
+      // early on that, so nothing is pasted and only the key is sent.
+      await insertText(command.text, Number(settings.typingDelayMs))
+      if (command.pressEnter) await pressEnter()
     } catch (err) {
-      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
+      persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
       this.#settle('error', err instanceof Error ? err.message : 'Could not insert the text.')
       return
     }
 
-    persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
+    persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
     this.#settle('success')
   }
 

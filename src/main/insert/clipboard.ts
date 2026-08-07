@@ -74,3 +74,31 @@ export async function insertText(text: string, restoreDelayMs?: number): Promise
     }
   }, delay)
 }
+
+/**
+ * Long enough for the target to have serviced the paste before Enter arrives.
+ *
+ * SendInput preserves queue order, so a well-behaved app would see Ctrl+V and
+ * Enter in the right sequence with no wait at all. Not every app is one:
+ * anything that debounces input or repaints between the two can act on Enter
+ * against a field it has not finished filling — and for the apps this command
+ * exists for, that means sending a half-empty message.
+ *
+ * Cheap insurance against an unrecoverable failure, and small against the §3
+ * budget.
+ */
+const PASTE_SETTLE_MS = 60
+
+/**
+ * Send Enter to whatever window the text just went into (§9 voice commands).
+ *
+ * Waits out PASTE_SETTLE_MS first, so this is only ever called after the paste
+ * it belongs to. It carries no UIPI guard of its own — the caller has already
+ * probed the target, and an elevated window rejects this the same silent way
+ * it rejects the paste (§6.4).
+ */
+export async function pressEnter(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, PASTE_SETTLE_MS))
+  await keyboard.pressKey(Key.Enter)
+  await keyboard.releaseKey(Key.Enter)
+}
