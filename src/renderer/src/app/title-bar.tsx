@@ -1,6 +1,7 @@
-import { Minus, PanelLeftClose, PanelLeftOpen, Square, X, Copy } from 'lucide-react'
+import { Minus, Moon, PanelLeftClose, PanelLeftOpen, Square, Sun, X, Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tooltip } from '@/components/ui/tooltip.js'
+import { useResolvedTheme } from '@/lib/theme.js'
 import { cn } from '@/lib/utils.js'
 
 /**
@@ -17,9 +18,14 @@ import { cn } from '@/lib/utils.js'
  * No wordmark in the leading slot: the name is carried by the sidebar's brand
  * lockup, so repeating it here would be a second wordmark two centimetres
  * away. The slot holds the sidebar toggle instead.
+ *
+ * It paints no background and carries no bottom border: it sits ON the window
+ * ground, and the blocks below are what the gap separates it from. A border
+ * here would draw a line the panelled layout has already made unnecessary.
  */
 export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle: () => void } }) {
   const [maximized, setMaximized] = useState(false)
+  const theme = useResolvedTheme(window.wispr.theme)
 
   useEffect(() => {
     void window.wispr.window.isMaximized().then(setMaximized)
@@ -48,9 +54,35 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
 
   const toggleLabel = sidebar.collapsed ? 'Show sidebar' : 'Hide sidebar'
 
+  /**
+   * A two-way switch, so it writes 'light' or 'dark' and never 'system' —
+   * clicking it is the user naming a theme, which is exactly what dropping
+   * 'system' means. Settings keeps the three-way choice for putting it back.
+   *
+   * The icon shows what the click WILL do, not what is on (§12: a button's
+   * label matches its result), and it renders from the value the main process
+   * broadcast rather than from local state — so if the write fails, the icon
+   * simply does not flip instead of lying about the theme.
+   */
+  const dark = theme === 'dark'
+  const themeLabel = dark ? 'Switch to light mode' : 'Switch to dark mode'
+  const ThemeIcon = dark ? Sun : Moon
+
   return (
-    <header className="drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface pl-1.5">
-      <div className="no-drag flex items-center">
+    <header className="drag flex h-11 shrink-0 items-center justify-between pl-1.5">
+      <div className="no-drag flex items-center gap-0.5">
+        <Tooltip label={themeLabel}>
+          <button
+            onClick={() => {
+              void window.wispr.settings.set('theme', dark ? 'light' : 'dark').catch(() => {})
+            }}
+            aria-label={themeLabel}
+            className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"
+          >
+            <ThemeIcon size={16} strokeWidth={2} />
+          </button>
+        </Tooltip>
+
         <Tooltip label={toggleLabel}>
           <button
             onClick={sidebar.onToggle}

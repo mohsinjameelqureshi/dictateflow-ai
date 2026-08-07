@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppRoute } from '@shared/types.js'
 import { useTheme } from './lib/theme.js'
-import { Sidebar } from './app/sidebar.js'
+import { Sidebar, SidebarHandle } from './app/sidebar.js'
 import { TitleBar } from './app/title-bar.js'
 import { HistoryPage } from './features/dictation/history-page.js'
 import { DictionaryPage } from './features/dictionary/dictionary-page.js'
@@ -32,7 +32,8 @@ export default function App() {
   const openSettings = useSettingsDialog((s) => s.open)
   const closeSettings = useSettingsDialog((s) => s.close)
 
-  useTheme(window.wispr.theme)
+  // `true` — the main window cross-fades theme changes; the widget does not.
+  useTheme(window.wispr.theme, true)
   useEffect(() => window.wispr.app.onNavigate(setRoute), [])
   useEffect(() => localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'), [collapsed])
 
@@ -45,17 +46,28 @@ export default function App() {
   const toggleSidebar = useCallback(() => setCollapsed((c) => !c), [])
 
   return (
-    <div className="flex h-full flex-col">
+    // Panelled layout: the window itself is the ground (`surface`), and the
+    // sidebar and the content each float on it as their own rounded block. The
+    // gap between them is what separates the two regions, which is why neither
+    // block needs a shared border — remove the padding here and the seam has to
+    // come back as a divider line. That gap is also the collapse toggle; see
+    // SidebarHandle.
+    <div className="flex h-full flex-col bg-surface">
       <TitleBar sidebar={{ collapsed, onToggle: toggleSidebar }} />
-      <div className="flex min-h-0 flex-1">
+      {/* No `gap` here: SidebarHandle is the gap, so that space is clickable
+          rather than dead. */}
+      <div className="flex min-h-0 flex-1 p-2 pt-0">
         <Sidebar
           route={route}
           collapsed={collapsed}
           onNavigate={setRoute}
-          onToggle={toggleSidebar}
           onOpenSettings={openSettings}
         />
-        <main className="min-w-0 flex-1 bg-panel">
+        <SidebarHandle onToggle={toggleSidebar} />
+        {/* `overflow-hidden` is load-bearing, not tidiness: the pages scroll,
+            and without it the scrolled content paints over the rounded
+            corners. */}
+        <main className="min-w-0 flex-1 overflow-hidden rounded-panel border border-line bg-panel">
           {route === 'history' && <HistoryPage />}
           {route === 'dictionary' && <DictionaryPage />}
           {route === 'transform' && <TransformPage />}

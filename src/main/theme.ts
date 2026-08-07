@@ -19,7 +19,7 @@ import { getWidgetWindow } from './windows/widget-window.js'
 
 /** Matches --color-surface in theme.css. Used to stop a white flash on load. */
 const WINDOW_BACKGROUND: Record<ResolvedTheme, string> = {
-  light: '#fbfbfd',
+  light: '#f1f1f4',
   dark: '#0f0f11',
 }
 

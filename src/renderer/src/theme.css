@@ -10,7 +10,15 @@
  * heatmap ramp was re-validated there rather than flipped.
  */
 @theme {
-  --color-surface: #fbfbfd;
+  /**
+   * `surface` is the window GROUND — the tone the sidebar and content blocks
+   * float on, and the only thing that separates them. It was #fbfbfd, which is
+   * a hairline off the white panel and left the gap invisible in light mode.
+   * Still near-white (§12), just far enough from the panel to read as behind
+   * it. Do not move it back toward #fff without giving the blocks a border
+   * that does the separating instead.
+   */
+  --color-surface: #f1f1f4;
   --color-panel: #ffffff;
 
   --color-ink: #18181b;
@@ -19,6 +27,17 @@
 
   --color-line: #e4e4e7;
   --color-line-soft: #f4f4f5;
+
+  /**
+   * The fill on a SELECTED thing — the active sidebar item. Neutral, like the
+   * hover fill it is a step deeper than, because the accent is spent elsewhere.
+   *
+   * It is its own token rather than `line-soft` reused: on the white panel
+   * `line-soft` is 1.03:1, which is a colour you can only see if you already
+   * know it is there. It also has to out-read the hover fill, or the selected
+   * item and a hovered neighbour look identical.
+   */
+  --color-selected: #e6e6eb;
 
   /* The one accent. */
   --color-accent: #4f46e5;
@@ -92,6 +111,10 @@
 
   --color-line: #2a2a30;
   --color-line-soft: #202024;
+
+  /* Dark needs less of a step than light did — a lift off #17171a reads at a
+     smaller delta than a darkening of #ffffff. */
+  --color-selected: #26262c;
 
   /* The accent moves UP the ramp on dark — 6.00:1 on the panel. */
   --color-accent: #818cf8;

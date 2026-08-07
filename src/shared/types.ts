@@ -16,6 +16,7 @@ export const SETTING_KEYS = [
   'enhanceEnabled',
   'keepRecordings',
   'recordingRetentionDays',
+  'pressEnterCommand',
 ] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
@@ -33,6 +34,10 @@ export const DEFAULT_SETTINGS: Record<SettingKey, string> = {
   enhanceEnabled: 'false', // §4 — off by default, it deletes words
   keepRecordings: 'true', // §8 — on by default; hearing the clip is the point
   recordingRetentionDays: '0', // §8 — 0 means keep everything
+  // §9 lists voice commands as deferred; this is the first one, so it lives
+  // behind Experimental and starts off. It removes words from what gets typed,
+  // which is the one thing §4 is emphatic about never doing by surprise.
+  pressEnterCommand: 'false',
 }
 
 /** §8 — the offered retention windows. 0 is "keep everything", not "delete now". */
@@ -329,7 +334,7 @@ export interface ApiKeyStatus {
 /* ----------------------------------------------------------- settings ---- */
 
 /** Tabs in the settings dialog's own rail. */
-export type SettingsTab = 'general' | 'transcription' | 'data' | 'about'
+export type SettingsTab = 'general' | 'transcription' | 'data' | 'experimental' | 'about'
 
 /**
  * A microphone, as offered to the picker. Enumerated by the widget renderer —

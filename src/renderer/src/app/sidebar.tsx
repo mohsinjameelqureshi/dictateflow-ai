@@ -56,8 +56,11 @@ function NavButton({
       className={cn(
         "flex items-center rounded-lg text-left text-sm transition-colors",
         collapsed ? "size-10 justify-center" : "w-full gap-3 px-3 py-2",
+        // Neutral, like a ghost button's hover, rather than the indigo it used
+        // to carry — but one step deeper than that hover, so it stays legible
+        // on the white panel and cannot be confused with a hovered neighbour.
         active
-          ? "bg-accent-soft font-medium text-accent"
+          ? "bg-selected font-medium text-ink"
           : "text-ink-muted hover:bg-line-soft hover:text-ink",
       )}
     >
@@ -86,13 +89,11 @@ export function Sidebar({
   route,
   collapsed,
   onNavigate,
-  onToggle,
   onOpenSettings,
 }: {
   route: AppRoute;
   collapsed: boolean;
   onNavigate: (r: AppRoute) => void;
-  onToggle: () => void;
   onOpenSettings: () => void;
 }) {
   return (
@@ -101,7 +102,10 @@ export function Sidebar({
       id="app-sidebar"
       aria-label="Main"
       className={cn(
-        "relative flex shrink-0 flex-col gap-1 overflow-hidden border-r border-line bg-surface p-3",
+        // Its own block on the window ground, not a strip fused to the content
+        // — hence a border on all four sides and a radius, with SidebarHandle
+        // occupying the gap that separates it from the content.
+        "flex shrink-0 flex-col gap-1 overflow-hidden rounded-panel border border-line bg-panel p-3",
         "transition-[width] duration-200 ease-out",
         collapsed ? "w-[68px] items-center" : "w-52",
       )}
@@ -152,32 +156,38 @@ export function Sidebar({
           onClick={() => onOpenSettings()}
         />
       </div>
-
-      {/* The divider doubles as a toggle, so the edge you already read as the
-          sidebar's boundary is also the thing that moves it.
-
-          The strip is 8px of hit area over a 1px line — a hairline is a target
-          you have to aim at. It sits inside the nav's own padding, so it never
-          overlaps a nav button.
-
-          Pointer-only on purpose: `tabIndex={-1}` and `aria-hidden` keep it out
-          of the tab order and the accessibility tree, because it does exactly
-          what the title bar's toggle does and a second identical control is
-          noise to anyone navigating by keyboard or screen reader. */}
-      <button
-        type="button"
-        onClick={onToggle}
-        tabIndex={-1}
-        aria-hidden
-        className="group absolute inset-y-0 right-0 z-10 w-2 cursor-pointer"
-      >
-        <span
-          className={cn(
-            "absolute inset-y-0 right-0 w-0.5 transition-colors duration-150",
-            "group-hover:bg-accent group-active:bg-accent-hover",
-          )}
-        />
-      </button>
     </nav>
+  );
+}
+
+/**
+ * The gap between the sidebar block and the content block, as a toggle.
+ *
+ * It used to be a strip clamped to the sidebar's own right edge. Once the two
+ * became separate blocks that edge stopped being the boundary between them —
+ * the space between them is. So the handle IS the gap: the whole 8px channel
+ * is the hit area, which is a target you can hit without aiming.
+ *
+ * It must be a sibling of the two blocks rather than a child of either, which
+ * is why the row in App.tsx sets no `gap` — this element is the gap.
+ *
+ * Pointer-only on purpose: `tabIndex={-1}` and `aria-hidden` keep it out of the
+ * tab order and the accessibility tree, because it does exactly what the title
+ * bar's toggle does and a second identical control is noise to anyone
+ * navigating by keyboard or screen reader.
+ */
+export function SidebarHandle({ onToggle }: { onToggle: () => void }) {
+  return (
+    // It paints nothing, in any state. The gap is meant to read as space
+    // between two blocks; a line appearing under the pointer turns it back into
+    // a divider, which is the thing the panelled layout removed. The cursor is
+    // the only affordance.
+    <button
+      type="button"
+      onClick={onToggle}
+      tabIndex={-1}
+      aria-hidden
+      className="w-2 shrink-0 cursor-pointer"
+    />
   );
 }

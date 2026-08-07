@@ -52,22 +52,75 @@
     width: 10px;
     height: 10px;
   }
+  /* The border is what insets the thumb from the track. It has to be
+     transparent + clipped, not painted in `surface`: scrollbars sit inside the
+     panels now, so a surface-coloured ring would draw the window ground on top
+     of a white panel. */
   ::-webkit-scrollbar-thumb {
     background: #d4d4d8;
     border-radius: 999px;
-    border: 3px solid var(--color-surface);
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
+  /* `background-color`, not the `background` shorthand — the shorthand resets
+     background-clip and the thumb would swell into its inset on hover. */
   ::-webkit-scrollbar-thumb:hover {
-    background: #a1a1aa;
+    background-color: #a1a1aa;
   }
   :root[data-theme='dark'] ::-webkit-scrollbar-thumb {
-    background: #3f3f46;
+    background-color: #3f3f46;
   }
   :root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
-    background: #52525b;
+    background-color: #52525b;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
+  }
+}
+
+/* Held on <html> only while a theme cross-fade is running. The whole window
+   has to change colour in the single frame the "after" snapshot is taken from;
+   an element easing to its new colour on its own clock is still wearing the old
+   one when that snapshot is captured, and pops when the fade ends. */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
+/* The theme cross-fade — see applyTheme in lib/theme.ts.
+
+   The browser snapshots the window before and after the switch and gives us
+   two pseudo-elements to animate. Overlapping them at full duration is what
+   makes it read as one surface changing colour: the default is a fade-out
+   followed by a fade-in, which dips through whatever is behind them halfway.
+   Both run the whole time, so the window is never showing less than one
+   complete image of itself.
+
+   `mix-blend-mode: normal` on both is required with overlapping opacity —
+   the default plus-lighter blend adds the two images together and blows the
+   midpoint out to white, which reads as a flash exactly where the fade should
+   be calmest. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+  animation-timing-function: ease;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  animation-name: theme-fade-out;
+}
+::view-transition-new(root) {
+  animation-name: theme-fade-in;
+}
+@keyframes theme-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes theme-fade-in {
+  from {
+    opacity: 0;
   }
 }
 

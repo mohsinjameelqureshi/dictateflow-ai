@@ -159,7 +159,10 @@ export function Dialog({
           className,
         )}
       >
-        <header className="flex shrink-0 items-start justify-between gap-6 border-b border-line px-5 py-4">
+        {/* No bottom border: the panel is a ground its content floats on, the
+            same way the window's title bar sits above the sidebar and content
+            blocks. A divider here would draw a seam the gap already reads as. */}
+        <header className="flex shrink-0 items-start justify-between gap-6 px-5 py-4">
           <div className="min-w-0">
             <h1 id={titleId} className="text-sm font-medium text-ink">
               {title}
