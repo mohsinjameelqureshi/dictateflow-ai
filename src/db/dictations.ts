@@ -1,5 +1,6 @@
 import { and, count, desc, eq, or, sql, type SQL } from 'drizzle-orm'
 import { getDb, schema } from './client.js'
+import { localDayKey } from '../shared/day.js'
 import {
   countWords,
   type DictationDto,
@@ -22,14 +23,6 @@ export const toDto = (row: Dictation): DictationDto => ({
   favorite: row.favorite,
   createdAt: row.createdAt.getTime(),
 })
-
-/** 'YYYY-MM-DD' in LOCAL time — §8 defines streaks in the local timezone. */
-export function localDayKey(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 /**
  * The single write path for a finished dictation. Both the capture loop and

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, ChevronDown, Copy, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
+import { Tooltip } from '@/components/ui/tooltip.js'
 import { cn } from '@/lib/utils.js'
 import type { DictationDto } from '@shared/types.js'
 
@@ -74,39 +75,42 @@ export function DictationCard({
             </>
           ) : (
             <>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={copy}
-                aria-label={copied ? 'Copied' : 'Copy transcript'}
-                title={copied ? 'Copied' : 'Copy'}
-                className={FADE}
-              >
-                {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
-              </Button>
+              <Tooltip label={copied ? 'Copied' : 'Copy'} className={FADE}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={copy}
+                  aria-label={copied ? 'Copied' : 'Copy transcript'}
+                >
+                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                </Button>
+              </Tooltip>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => onToggleFavorite(id, !favorite)}
-                aria-pressed={favorite}
-                aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
-                title={favorite ? 'Favorited' : 'Favorite'}
+              <Tooltip
+                label={favorite ? 'Remove from favorites' : 'Favorite'}
                 className={cn(!favorite && FADE)}
               >
-                <Star size={14} className={favorite ? 'fill-accent text-accent' : undefined} />
-              </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onToggleFavorite(id, !favorite)}
+                  aria-pressed={favorite}
+                  aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Star size={14} className={favorite ? 'fill-accent text-accent' : undefined} />
+                </Button>
+              </Tooltip>
 
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setConfirming(true)}
-                aria-label="Delete transcript"
-                title="Delete"
-                className={FADE}
-              >
-                <Trash2 size={14} />
-              </Button>
+              <Tooltip label="Delete" className={FADE}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setConfirming(true)}
+                  aria-label="Delete transcript"
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </Tooltip>
             </>
           )}
         </div>

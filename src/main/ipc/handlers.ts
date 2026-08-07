@@ -7,6 +7,7 @@ import {
   setFavorite,
 } from '../../db/dictations.js'
 import { createRule, deleteRule, listDictionary, updateRule } from '../../db/dictionary.js'
+import { getInsights } from '../../db/stats.js'
 import { IPC } from '../../shared/ipc-channels.js'
 import {
   type ApiKeyStatus,
@@ -16,6 +17,7 @@ import {
   type DictationDto,
   type DictionaryDto,
   type DictionaryWrite,
+  type InsightsDto,
   type IpcMap,
   type ListDictationsQuery,
   type NewDictationDto,
@@ -137,6 +139,10 @@ export function registerIpcHandlers(): void {
   )
 
   handle(IPC.dictationsDelete, (id: number): boolean => deleteDictation(id))
+
+  /* -------------------------------------------------------- insights ---- */
+
+  handle(IPC.insightsGet, (): InsightsDto => getInsights())
 
   /* ------------------------------------------------------ dictionary ---- */
 

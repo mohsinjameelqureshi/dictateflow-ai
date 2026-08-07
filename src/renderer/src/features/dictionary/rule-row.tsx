@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
 import { Input } from '@/components/ui/input.js'
+import { Tooltip } from '@/components/ui/tooltip.js'
 import type { DictionaryDto } from '@shared/types.js'
 
 /**
@@ -120,24 +121,26 @@ export function RuleRow({
           </>
         ) : (
           <>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setEditing(true)}
-              aria-label={`Edit ${entry.from}`}
-              title="Edit"
-            >
-              <Pencil size={14} />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setConfirming(true)}
-              aria-label={`Delete ${entry.from}`}
-              title="Delete"
-            >
-              <Trash2 size={14} />
-            </Button>
+            <Tooltip label="Edit">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setEditing(true)}
+                aria-label={`Edit ${entry.from}`}
+              >
+                <Pencil size={14} />
+              </Button>
+            </Tooltip>
+            <Tooltip label="Delete">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setConfirming(true)}
+                aria-label={`Delete ${entry.from}`}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </Tooltip>
           </>
         )}
       </div>

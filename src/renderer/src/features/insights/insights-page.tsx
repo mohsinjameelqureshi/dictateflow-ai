@@ -1,40 +1,72 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Page, Stat } from '@/components/page.js'
-import type { DictationDto } from '@shared/types.js'
+import type { InsightsDto } from '@shared/types.js'
+import { Heatmap } from './heatmap.js'
 
 /**
- * Phase 1 shows the layout with values derived client-side from the last
- * page of dictations. Phase 4 replaces this with real aggregation over
- * dailyStats, plus the heatmap and streaks.
+ * §8 fixes every definition on this page, because ambiguity here produces
+ * meaningless numbers:
  *
- * Metric definitions are fixed in §8 — WPM is words over RECORDING duration,
- * not speech duration.
+ *   WPM     words ÷ RECORDING duration (not speech duration)
+ *   Word    whitespace-delimited token, empties filtered
+ *   Streak  consecutive days with ≥1 session, local timezone
+ *
+ * All of it is derived on read from `dailyStats` — there is no totals table
+ * to drift out of sync.
  */
-export function InsightsPage() {
-  const [items, setItems] = useState<DictationDto[]>([])
+function formatDuration(ms: number): string {
+  const minutes = Math.round(ms / 60000)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
+}
 
-  useEffect(() => {
-    void window.wispr.dictations.list({ limit: 500 }).then(setItems)
+export function InsightsPage() {
+  const [data, setData] = useState<InsightsDto | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      setData(await window.wispr.insights.get())
+    } catch {
+      setError('Could not read your statistics.')
+    }
   }, [])
 
-  const words = items.reduce((n, d) => n + d.words, 0)
-  const durationMs = items.reduce((n, d) => n + d.durationMs, 0)
-  const wpm = durationMs > 0 ? Math.round(words / (durationMs / 60000)) : 0
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  // A finished dictation changes every number here.
+  useEffect(() => window.wispr.dictations.onChanged(() => void load()), [load])
 
   return (
     <Page title="Insights" description="Derived from your local history.">
+      {error && <p className="mb-4 text-sm text-danger">{error}</p>}
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat value={words.toLocaleString()} label="Words" />
-        <Stat value={items.length.toLocaleString()} label="Sessions" />
-        <Stat value={wpm} label="Words per minute" hint="over recording time" />
-        <Stat value="—" label="Day streak" hint="Phase 4" />
+        <Stat value={(data?.totalWords ?? 0).toLocaleString()} label="Words" />
+        <Stat
+          value={(data?.totalSessions ?? 0).toLocaleString()}
+          label="Sessions"
+          hint={data ? formatDuration(data.totalDurationMs) + ' recorded' : undefined}
+        />
+        <Stat value={data?.wpm ?? 0} label="Words per minute" hint="over recording time" />
+        <Stat
+          value={data?.currentStreak ?? 0}
+          label="Day streak"
+          hint={data && data.longestStreak > 0 ? `best ${data.longestStreak}` : undefined}
+        />
       </div>
 
-      <div className="mt-4 rounded-panel border border-dashed border-line p-10 text-center">
-        <p className="text-sm font-medium text-ink">Activity heatmap</p>
-        <p className="mt-1 text-sm text-ink-muted">
-          Lands in Phase 4, once daily aggregation is in place.
-        </p>
+      <div className="mt-4">
+        {data ? (
+          <Heatmap days={data.days} />
+        ) : (
+          <div className="rounded-panel border border-line bg-panel p-6">
+            <p className="text-sm text-ink-muted">Loading…</p>
+          </div>
+        )}
       </div>
     </Page>
   )

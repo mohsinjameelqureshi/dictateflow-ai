@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
+import { Tooltip } from '@/components/ui/tooltip.js'
 import type { AudioInputDevice } from '@shared/types.js'
 import { Select } from './parts.js'
 
@@ -63,16 +64,17 @@ export function MicrophoneField({
           {unlisted && <option value={value}>{missing ? 'Not connected' : 'Loading…'}</option>}
         </Select>
 
-        <Button
-          size="icon"
-          variant="secondary"
-          onClick={() => void load()}
-          disabled={loading}
-          aria-label="Refresh microphone list"
-          title="Refresh"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />
-        </Button>
+        <Tooltip label="Refresh">
+          <Button
+            size="icon"
+            variant="secondary"
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label="Refresh microphone list"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : undefined} />
+          </Button>
+        </Tooltip>
       </div>
 
       {missing && (

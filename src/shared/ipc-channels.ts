@@ -32,6 +32,9 @@ export const IPC = {
   dictationsSetFavorite: 'dictations:setFavorite',
   dictationsDelete: 'dictations:delete',
 
+  /* insights — totals, streaks and the heatmap, derived per §8 */
+  insightsGet: 'insights:get',
+
   /* personal dictionary — ships in v1 (§9) */
   dictionaryList: 'dictionary:list',
   dictionaryCreate: 'dictionary:create',

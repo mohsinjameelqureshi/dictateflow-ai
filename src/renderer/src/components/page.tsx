@@ -34,11 +34,14 @@ export function Stat({
 }: {
   value: string | number
   label: string
-  hint?: string
+  hint?: string | undefined
 }) {
   return (
     <div className="rounded-panel border border-line bg-panel p-6">
-      <div className="text-4xl font-semibold tabular-nums tracking-tight text-ink">{value}</div>
+      {/* Proportional figures, NOT tabular-nums: equal-width digits make a
+          number like 121 look loose at display sizes. Tabular is for columns
+          that align vertically — see the heatmap's table view. */}
+      <div className="text-4xl font-semibold tracking-tight text-ink">{value}</div>
       <div className="mt-2 text-sm text-ink-muted">{label}</div>
       {hint && <div className="mt-0.5 text-xs text-ink-subtle">{hint}</div>}
     </div>

@@ -8,6 +8,7 @@ import type {
   DictationDto,
   DictionaryDto,
   DictionaryWrite,
+  InsightsDto,
   IpcMap,
   ListDictationsQuery,
   NewDictationDto,
@@ -75,6 +76,10 @@ export const mainApi = {
       ipcRenderer.on(IPC_EVENT.dictationsChanged, listener)
       return () => ipcRenderer.off(IPC_EVENT.dictationsChanged, listener)
     },
+  },
+  insights: {
+    /** Totals, streaks and the heatmap, derived on read (§8). */
+    get: (): Promise<InsightsDto> => invoke(IPC.insightsGet),
   },
   dictionary: {
     list: (): Promise<DictionaryDto[]> => invoke(IPC.dictionaryList),

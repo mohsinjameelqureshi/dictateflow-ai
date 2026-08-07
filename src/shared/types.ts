@@ -65,6 +65,36 @@ export interface ListDictationsQuery {
   favoritesOnly?: boolean
 }
 
+/* ------------------------------------------------------------ insights ---- */
+
+/** One day in the heatmap. `day` is a local-time 'YYYY-MM-DD' key (§8). */
+export interface DayStat {
+  day: string
+  words: number
+  sessions: number
+  durationMs: number
+}
+
+/**
+ * §8 fixes these definitions so the numbers mean something:
+ *   - WPM is words over RECORDING duration, not speech duration.
+ *   - A word is a whitespace-delimited token, empties filtered.
+ *   - A streak is consecutive days with ≥1 session, in local time.
+ *
+ * There is no `statistics` table. All of this is derived on read, because a
+ * denormalised totals row drifts from reality for no benefit at this volume.
+ */
+export interface InsightsDto {
+  totalWords: number
+  totalSessions: number
+  totalDurationMs: number
+  wpm: number
+  currentStreak: number
+  longestStreak: number
+  /** Contiguous, oldest first — days with no activity are present as zeroes. */
+  days: DayStat[]
+}
+
 /* ---------------------------------------------------------- dictionary ---- */
 
 /** A personal dictionary rule. `createdAt` is epoch ms — IPC serialises. */
@@ -197,6 +227,7 @@ export interface IpcMap {
   'dictations:create': [NewDictationDto, DictationDto]
   'dictations:setFavorite': [{ id: number; favorite: boolean }, DictationDto | null]
   'dictations:delete': [number, boolean]
+  'insights:get': [void, InsightsDto]
   'dictionary:list': [void, DictionaryDto[]]
   'dictionary:create': [NewDictionaryDto, DictionaryWrite]
   'dictionary:update': [{ id: number } & NewDictionaryDto, DictionaryWrite]

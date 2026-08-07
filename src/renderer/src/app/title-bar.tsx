@@ -1,5 +1,6 @@
 import { Minus, Square, X, Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Tooltip } from '@/components/ui/tooltip.js'
 import { cn } from '@/lib/utils.js'
 
 /**
@@ -56,18 +57,18 @@ export function TitleBar({
 
       <div className="no-drag flex h-full">
         {controls.map(({ label, icon: Icon, onClick, danger }) => (
-          <button
-            key={label}
-            onClick={onClick}
-            aria-label={label}
-            title={label}
-            className={cn(
-              'flex h-full w-12 items-center justify-center text-ink-muted transition-colors',
-              danger ? 'hover:bg-danger hover:text-white' : 'hover:bg-line-soft hover:text-ink',
-            )}
-          >
-            <Icon size={14} strokeWidth={2} />
-          </button>
+          <Tooltip key={label} label={label} className="h-full">
+            <button
+              onClick={onClick}
+              aria-label={label}
+              className={cn(
+                'flex h-full w-12 items-center justify-center text-ink-muted transition-colors',
+                danger ? 'hover:bg-danger hover:text-white' : 'hover:bg-line-soft hover:text-ink',
+              )}
+            >
+              <Icon size={14} strokeWidth={2} />
+            </button>
+          </Tooltip>
         ))}
       </div>
     </header>
