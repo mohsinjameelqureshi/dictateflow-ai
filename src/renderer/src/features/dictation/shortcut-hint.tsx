@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { keyLabel, parseShortcut } from '@shared/shortcut.js'
 import { Button } from '@/components/ui/button.js'
+import { useSettingsDialog } from '@/features/settings/store.js'
 
 /**
  * The current hold-to-talk binding, spelled out in keycaps.
  *
- * This is the one thing a dictation app has to teach, and the shortcut lives
- * in a different window — so it is stated here rather than left to be
- * discovered. It follows a rebind live: Settings is non-modal, so both windows
- * can be on screen while the combo changes.
+ * This is the one thing a dictation app has to teach, and the shortcut is set
+ * somewhere else — so it is stated here rather than left to be discovered. It
+ * follows a rebind live, via the settings-changed broadcast, so the caps are
+ * already correct by the time the dialog closes over them.
  */
 
 /**
@@ -32,6 +33,7 @@ function KeyCap({ children }: { children: string }) {
 
 export function ShortcutHint() {
   const [shortcut, setShortcut] = useState<string | null>(null)
+  const openSettings = useSettingsDialog((s) => s.open)
 
   useEffect(() => {
     void window.wispr.settings.getAll().then((s) => setShortcut(s.shortcut ?? ''))
@@ -48,7 +50,7 @@ export function ShortcutHint() {
     return (
       <p className="mb-6 flex flex-wrap items-center gap-2 text-[15px] text-ink">
         No shortcut is set, so dictation cannot start.
-        <Button size="sm" onClick={() => void window.wispr.settings.open('general')}>
+        <Button size="sm" onClick={() => openSettings('general')}>
           Choose one
         </Button>
       </p>

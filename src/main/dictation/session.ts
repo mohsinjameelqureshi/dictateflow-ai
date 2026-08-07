@@ -16,6 +16,7 @@ import {
   stripVocabularyHint,
   type DictionaryRule,
 } from '../../services/enhance/dictionary.js'
+import { writeRecording, type WrittenRecording } from '../audio/store.js'
 import { broadcastDictationsChanged } from '../broadcast.js'
 import { insertText } from '../insert/clipboard.js'
 import { captureTarget, type InsertTarget } from '../insert/target.js'
@@ -221,12 +222,21 @@ class DictationSession {
     const replaced = applyDictionary(rawText, rules)
     bumpHitCounts(replaced.hitIds)
 
+    // §8 — the file is written HERE, past every guard that can still decide no
+    // row gets created. Everything below this line persists on all three of its
+    // exits, so there is no path where a clip is kept for a session that
+    // produced nothing: cancelled, too short and too quiet all returned above.
+    //
+    // File before row (§6.8). A stray file is swept on the next start; a row
+    // pointing at nothing is a Play button that is permanently broken.
+    const recording = keepRecording(settings, clip)
+
     // §6.4 — a non-elevated process cannot send input to an elevated window.
     // Detect it and say so, rather than appearing to succeed.
     const blocked = this.#target ? await this.#target.elevated : false
     if (this.#phase !== 'working') return // cancelled while the probe finished
     if (blocked) {
-      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes)
+      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
       this.#settle('blocked')
       return
     }
@@ -235,12 +245,12 @@ class DictationSession {
     try {
       await insertText(replaced.text, Number(settings.typingDelayMs))
     } catch (err) {
-      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes)
+      persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
       this.#settle('error', err instanceof Error ? err.message : 'Could not insert the text.')
       return
     }
 
-    persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes)
+    persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes, recording)
     this.#settle('success')
   }
 
@@ -318,12 +328,38 @@ function bumpHitCounts(ids: number[]): void {
   })
 }
 
+/**
+ * Write the clip to disk, or null if recordings are off or the write failed.
+ *
+ * §8 — the EXACT bytes that were sent to the provider, never re-encoded. The
+ * reason to keep a recording is to hear what actually happened when a
+ * transcript is wrong, and a re-encode destroys that evidence.
+ *
+ * A failure here is not a dictation failure. The user has their text; a full
+ * disk should not turn that into an error state.
+ */
+function keepRecording(
+  settings: ReturnType<typeof readSettings>,
+  clip: ClipPayload,
+): WrittenRecording | null {
+  if (settings.keepRecordings !== 'true') return null
+  try {
+    // Passed straight through, not copied into a new view: these are the exact
+    // bytes handed to the provider, and §8 wants that identity preserved.
+    return writeRecording(clip.bytes)
+  } catch (err) {
+    console.warn('[audio] could not write the recording:', err)
+    return null
+  }
+}
+
 function persist(
   rawText: string,
   finalText: string,
   durationMs: number,
   providerId: string,
   dictionaryFixes: number,
+  recording: WrittenRecording | null,
 ): void {
   try {
     createDictation({
@@ -335,10 +371,14 @@ function persist(
       enhanced: false,
       grammarFixes: 0,
       dictionaryFixes,
+      audioFile: recording?.file ?? null,
+      audioBytes: recording?.bytes ?? null,
+      audioMime: recording?.mime ?? null,
     })
     broadcastDictationsChanged()
   } catch {
     // A failed write must not swallow text the user already has inserted.
+    // The orphaned file this leaves behind is collected by the startup sweep.
   }
 }
 

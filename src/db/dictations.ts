@@ -1,5 +1,6 @@
-import { and, count, desc, eq, or, sql, type SQL } from 'drizzle-orm'
+import { and, count, desc, eq, isNotNull, lt, or, sql, type SQL } from 'drizzle-orm'
 import { getDb, schema } from './client.js'
+import { deleteRecording } from '../main/audio/store.js'
 import { localDayKey } from '../shared/day.js'
 import {
   countWords,
@@ -21,6 +22,10 @@ export const toDto = (row: Dictation): DictationDto => ({
   grammarFixes: row.grammarFixes,
   dictionaryFixes: row.dictionaryFixes,
   favorite: row.favorite,
+  // The filename never crosses the bridge — the renderer addresses a
+  // recording by dictation id through the wispr-audio scheme (§6.8).
+  hasAudio: !!row.audioFile,
+  audioBytes: row.audioBytes ?? null,
   createdAt: row.createdAt.getTime(),
 })
 
@@ -48,6 +53,11 @@ export function createDictation(input: NewDictationDto): DictationDto {
         enhanced: input.enhanced ?? false,
         grammarFixes: input.grammarFixes ?? 0,
         dictionaryFixes: input.dictionaryFixes ?? 0,
+        // §8 — the caller has already written the file. All three stay null
+        // together when recordings are off or the write failed.
+        audioFile: input.audioFile ?? null,
+        audioBytes: input.audioBytes ?? null,
+        audioMime: input.audioMime ?? null,
         createdAt: now,
       })
       .returning()
@@ -151,9 +161,16 @@ export function setFavorite(id: number, favorite: boolean): DictationDto | null 
 export function deleteDictation(id: number): boolean {
   const db = getDb()
 
-  return db.transaction((tx): boolean => {
+  // Captured inside the transaction, deleted after it commits: a file removed
+  // before the row is gone would leave a live row pointing at nothing if the
+  // transaction then rolled back. §8 — a stray file is the acceptable failure,
+  // a dangling row is not.
+  let audioFile: string | null = null
+
+  const deleted = db.transaction((tx): boolean => {
     const row = tx.select().from(schema.dictations).where(eq(schema.dictations.id, id)).get()
     if (!row) return false
+    audioFile = row.audioFile
 
     tx.delete(schema.dictations).where(eq(schema.dictations.id, id)).run()
 
@@ -181,4 +198,72 @@ export function deleteDictation(id: number): boolean {
 
     return true
   })
+
+  if (deleted) deleteRecording(audioFile)
+  return deleted
+}
+
+/**
+ * Every filename currently referenced by a row. The sweep compares the disk
+ * against this — see main/audio/store.ts.
+ */
+export function referencedRecordings(): Set<string> {
+  const rows = getDb()
+    .select({ file: schema.dictations.audioFile })
+    .from(schema.dictations)
+    .all()
+  return new Set(rows.map((r) => r.file).filter((f): f is string => !!f))
+}
+
+/**
+ * Forget every recording, without touching a transcript.
+ *
+ * Pairs with `clearRecordings()` in the store: that removes the files, this
+ * removes the claim that they exist. Called in that order, so there is never
+ * a row promising audio that is already gone.
+ */
+export function clearAudioColumns(): void {
+  getDb()
+    .update(schema.dictations)
+    .set({ audioFile: null, audioBytes: null, audioMime: null })
+    .where(isNotNull(schema.dictations.audioFile))
+    .run()
+}
+
+/**
+ * Drop recordings older than `days`, keeping favourites (§8) — favouriting is
+ * the user saying keep this. Returns how many rows lost their audio.
+ *
+ * The ROW survives; only the audio goes. The transcript is the record, the
+ * recording is the evidence, and retention is about disk, not history.
+ */
+export function expireRecordings(days: number): number {
+  if (days <= 0) return 0
+
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  const rows = getDb()
+    .select({ id: schema.dictations.id, file: schema.dictations.audioFile })
+    .from(schema.dictations)
+    .where(
+      and(
+        eq(schema.dictations.favorite, false),
+        isNotNull(schema.dictations.audioFile),
+        lt(schema.dictations.createdAt, cutoff),
+      ),
+    )
+    .all()
+
+  for (const row of rows) {
+    // Row first here, unlike the write path: if the file delete fails, the
+    // sweep collects it later. Clearing the columns first is what guarantees
+    // the UI stops offering a control that cannot work.
+    getDb()
+      .update(schema.dictations)
+      .set({ audioFile: null, audioBytes: null, audioMime: null })
+      .where(eq(schema.dictations.id, row.id))
+      .run()
+    deleteRecording(row.file)
+  }
+
+  return rows.length
 }

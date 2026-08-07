@@ -74,8 +74,8 @@ function NavButton({
  * §12 — icon + label, subtle active state. The nav list is deliberately short
  * and top-aligned: Snippets and Style get added here later without a redesign.
  *
- * Settings sits apart at the bottom because it is not a destination in this
- * window — it opens a window of its own.
+ * Settings sits apart at the bottom because it is not a destination — it opens
+ * a dialog over whichever page you are on, and you land back on that page.
  *
  * Collapsing narrows to an icon rail rather than hiding the nav outright. The
  * destinations stay one click away and the mark stays visible, which is the
@@ -87,11 +87,13 @@ export function Sidebar({
   collapsed,
   onNavigate,
   onToggle,
+  onOpenSettings,
 }: {
   route: AppRoute;
   collapsed: boolean;
   onNavigate: (r: AppRoute) => void;
   onToggle: () => void;
+  onOpenSettings: () => void;
 }) {
   return (
     <nav
@@ -145,7 +147,9 @@ export function Sidebar({
           icon={Settings}
           active={false}
           collapsed={collapsed}
-          onClick={() => void window.wispr.settings.open()}
+          // Wrapped, not passed straight through: NavButton hands `onClick` to
+          // the DOM, so a bare reference would be invoked with a MouseEvent.
+          onClick={() => onOpenSettings()}
         />
       </div>
 

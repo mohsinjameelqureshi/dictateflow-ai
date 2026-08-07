@@ -23,6 +23,18 @@ export const dictations = sqliteTable(
     grammarFixes: integer('grammar_fixes').notNull().default(0),
     dictionaryFixes: integer('dictionary_fixes').notNull().default(0),
     favorite: integer('favorite', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * The recording (§8). Filename only, never an absolute path — the
+     * directory is resolved at runtime so a reinstall or a moved profile does
+     * not orphan every row at once.
+     *
+     * All three are nullable with no backfill, on purpose: this is an additive
+     * migration onto a table that shipped in Phase 3. Those older rows have no
+     * audio and must render a disabled control, not a broken one.
+     */
+    audioFile: text('audio_file'),
+    audioBytes: integer('audio_bytes'),
+    audioMime: text('audio_mime'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (t) => [

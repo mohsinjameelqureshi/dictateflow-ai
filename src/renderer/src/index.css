@@ -84,6 +84,27 @@
   }
 }
 
+/* The modal dialog's entrance. Enter only, on purpose: an exit animation
+   holds the page hostage for its duration, and Settings closing should just be
+   closed. The reduced-motion block above flattens both to nothing. */
+@keyframes dialog-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+.dialog-scrim {
+  animation: dialog-scrim-in 150ms ease-out;
+}
+.dialog-panel {
+  animation: dialog-panel-in 150ms ease-out;
+}
+
 /* Frameless window drag regions. */
 .drag {
   -webkit-app-region: drag;

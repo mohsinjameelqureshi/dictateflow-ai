@@ -1,9 +1,43 @@
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, Copy, Star, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, Copy, Pause, Play, Star, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
 import { Tooltip } from '@/components/ui/tooltip.js'
 import { cn } from '@/lib/utils.js'
 import type { DictationDto } from '@shared/types.js'
+import { usePlayer } from './player.js'
+
+/** mm:ss. Recordings are minutes at most, so hours would be dead width. */
+function clock(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds))
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
+}
+
+/**
+ * The ticking readout, isolated in its own component on purpose.
+ *
+ * `timeupdate` fires about four times a second. Reading elapsed in the card
+ * would re-render the whole row — text, buttons, tooltips — on every tick;
+ * here only this span does.
+ *
+ * Mounted only for the row that is loaded, so no other row subscribes at all.
+ */
+function PlaybackTime({ fallbackMs }: { fallbackMs: number }) {
+  const elapsed = usePlayer((s) => s.elapsed)
+  const duration = usePlayer((s) => s.duration)
+
+  // The recorded duration is the honest stand-in until metadata arrives —
+  // they describe the same clip, and it stops the total jumping into place.
+  const total = duration ?? fallbackMs / 1000
+
+  return (
+    <>
+      <span aria-hidden>·</span>
+      <span className="text-accent">
+        {clock(elapsed)} / {clock(total)}
+      </span>
+    </>
+  )
+}
 
 /**
  * Hidden until the row is hovered or something inside it takes focus. The
@@ -46,9 +80,31 @@ export function DictationCard({
     return () => clearTimeout(t)
   }, [confirming])
 
-  const { id, finalText, rawText, favorite, words, durationMs, createdAt, dictionaryFixes } =
-    dictation
+  const {
+    id,
+    finalText,
+    rawText,
+    favorite,
+    words,
+    durationMs,
+    createdAt,
+    dictionaryFixes,
+    hasAudio,
+  } = dictation
   const differs = rawText.trim() !== finalText.trim()
+
+  // Subscribed narrowly: every row re-rendering on each timeupdate would be a
+  // hundred renders a second on a long list.
+  const isCurrent = usePlayer((s) => s.id === id)
+  const playing = usePlayer((s) => s.id === id && s.playing)
+  const failed = usePlayer((s) => s.id === id && s.failed)
+  const toggle = usePlayer((s) => s.toggle)
+  const release = usePlayer((s) => s.release)
+
+  // A row whose file 404s is indistinguishable from one that never had audio
+  // once the attempt has failed — §13 says degrade honestly rather than offer
+  // a control that cannot work.
+  const playable = hasAudio && !failed
 
   const copy = () => {
     void window.wispr.clipboard.write(finalText).then(() => setCopied(true))
@@ -66,7 +122,17 @@ export function DictationCard({
         <div className="flex shrink-0 items-center gap-0.5">
           {confirming ? (
             <>
-              <Button size="sm" variant="danger" onClick={() => onDelete(id)}>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  // Drop the source before the row goes: the file is deleted
+                  // with it, and an element still pointing at it would fire a
+                  // media error and flash "Recording is missing" on the way out.
+                  release(id)
+                  onDelete(id)
+                }}
+              >
                 Delete
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
@@ -75,6 +141,38 @@ export function DictationCard({
             </>
           ) : (
             <>
+              {/* First in the group: it is the only control that reveals
+                  something the row does not already show. Stays visible while
+                  playing — a control you must hover to find is a control you
+                  cannot use to stop what you are hearing. */}
+              <Tooltip
+                label={
+                  !hasAudio
+                    ? 'No recording'
+                    : failed
+                      ? 'Recording is missing'
+                      : playing
+                        ? 'Pause'
+                        : 'Play'
+                }
+                className={cn(!isCurrent && FADE)}
+              >
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => toggle(id)}
+                  disabled={!playable}
+                  aria-pressed={playing}
+                  aria-label={playing ? 'Pause recording' : 'Play recording'}
+                >
+                  {playing ? (
+                    <Pause size={14} className="fill-accent text-accent" />
+                  ) : (
+                    <Play size={14} className={isCurrent ? 'text-accent' : undefined} />
+                  )}
+                </Button>
+              </Tooltip>
+
               <Tooltip label={copied ? 'Copied' : 'Copy'} className={FADE}>
                 <Button
                   size="icon"
@@ -122,6 +220,7 @@ export function DictationCard({
         <span>{words} words</span>
         <span aria-hidden>·</span>
         <span>{(durationMs / 1000).toFixed(1)}s</span>
+        {isCurrent && <PlaybackTime fallbackMs={durationMs} />}
         {dictionaryFixes > 0 && (
           <>
             <span aria-hidden>·</span>

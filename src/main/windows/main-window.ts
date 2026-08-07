@@ -1,5 +1,7 @@
 import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
+import { IPC_EVENT } from '../../shared/ipc-channels.js'
+import type { SettingsTab } from '../../shared/types.js'
 import { appIcon } from '../app-icon.js'
 import { readFlag } from '../settings.js'
 import { windowBackground } from '../theme.js'
@@ -9,8 +11,8 @@ import { windowBackground } from '../theme.js'
  * chrome makes it feel like a web page in a box.
  *
  * Note this is NOT the widget. The widget (Phase 2) has different rules:
- * focusable:false, transparent, always-on-top. See §6.2. Settings is a third
- * window again — see settings-window.ts.
+ * focusable:false, transparent, always-on-top. See §6.2. Those two are the
+ * only windows: Settings is a dialog inside this one.
  */
 
 let main: BrowserWindow | null = null
@@ -25,11 +27,40 @@ app.on('before-quit', () => {
 })
 
 /**
- * There are three windows now, so "the main window" can no longer be inferred
- * from `getAllWindows()`. The tray needs to name it exactly.
+ * The widget is also a window, so "the main window" cannot be inferred from
+ * `getAllWindows()`. The tray needs to name it exactly.
  */
 export function getMainWindow(): BrowserWindow | null {
   return main && !main.isDestroyed() ? main : null
+}
+
+/**
+ * Bring the main window up, building it if `minimizeToTray` is off and it was
+ * torn down on close. Hidden, minimised, and destroyed all have to end with a
+ * window the user is looking at.
+ */
+export function focusMainWindow(): BrowserWindow {
+  const win = getMainWindow() ?? createMainWindow()
+  if (win.isMinimized()) win.restore()
+  win.show()
+  win.focus()
+  return win
+}
+
+/**
+ * Settings is a dialog in the main window, so opening it from main means
+ * showing that window and telling the renderer which tab to select.
+ *
+ * `did-finish-load` rather than a bare send: the tray can ask for Settings
+ * when there is no window at all, and an event sent at a renderer that has not
+ * run its scripts yet is dropped with no error.
+ */
+export function openSettings(tab: SettingsTab = 'general'): void {
+  const win = focusMainWindow()
+  const send = (): void => win.webContents.send(IPC_EVENT.settingsNavigate, tab)
+
+  if (win.webContents.isLoading()) win.webContents.once('did-finish-load', send)
+  else send()
 }
 
 export function createMainWindow(): BrowserWindow {

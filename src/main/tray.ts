@@ -1,7 +1,6 @@
-import { BrowserWindow, Menu, Tray, app } from 'electron'
+import { Menu, Tray, app } from 'electron'
 import { trayIcon } from './app-icon.js'
-import { createMainWindow, getMainWindow } from './windows/main-window.js'
-import { openSettingsWindow } from './windows/settings-window.js'
+import { focusMainWindow, openSettings } from './windows/main-window.js'
 
 /**
  * System tray: Open / Settings / Quit (§9).
@@ -12,20 +11,6 @@ import { openSettingsWindow } from './windows/settings-window.js'
  */
 let tray: Tray | null = null
 
-/**
- * The main window is named explicitly rather than found by scanning windows.
- * With Settings now a window of its own, "the first focusable window" is a
- * coin toss.
- */
-function focusMain(): BrowserWindow {
-  const win = getMainWindow() ?? createMainWindow()
-  if (win.isMinimized()) win.restore()
-  // It may be hidden rather than destroyed — that is what minimizeToTray does.
-  win.show()
-  win.focus()
-  return win
-}
-
 export function createTray(): Tray {
   if (tray) return tray
 
@@ -33,15 +18,15 @@ export function createTray(): Tray {
   tray.setToolTip('Wispr AI')
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Open', click: () => focusMain() },
-      // Settings is its own window now, so the tray opens it directly instead
-      // of routing a navigation through the main window.
-      { label: 'Settings', click: () => openSettingsWindow() },
+      { label: 'Open', click: () => focusMainWindow() },
+      // Settings is a dialog in the main window, so this shows that window and
+      // asks the renderer to open it.
+      { label: 'Settings', click: () => openSettings() },
       { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
     ]),
   )
-  tray.on('double-click', () => focusMain())
+  tray.on('double-click', () => focusMainWindow())
 
   return tray
 }

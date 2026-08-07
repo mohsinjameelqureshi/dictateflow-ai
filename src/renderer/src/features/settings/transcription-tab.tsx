@@ -1,4 +1,4 @@
-import { ApiKeyCard } from '@/features/settings/api-key-card.js'
+import { ApiKeyCard } from './api-key-card.js'
 import { Row, Section, Select } from './parts.js'
 import type { SettingsStore } from './use-settings.js'
 

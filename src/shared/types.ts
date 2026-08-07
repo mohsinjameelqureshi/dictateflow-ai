@@ -14,6 +14,8 @@ export const SETTING_KEYS = [
   'typingDelayMs',
   'speechProvider',
   'enhanceEnabled',
+  'keepRecordings',
+  'recordingRetentionDays',
 ] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
@@ -29,6 +31,51 @@ export const DEFAULT_SETTINGS: Record<SettingKey, string> = {
   typingDelayMs: '150',
   speechProvider: 'groq',
   enhanceEnabled: 'false', // §4 — off by default, it deletes words
+  keepRecordings: 'true', // §8 — on by default; hearing the clip is the point
+  recordingRetentionDays: '0', // §8 — 0 means keep everything
+}
+
+/** §8 — the offered retention windows. 0 is "keep everything", not "delete now". */
+export const RETENTION_DAYS = [0, 7, 30, 90] as const
+
+/**
+ * What Settings shows about `recordings/` (§8). At ~1.9MB per spoken minute
+ * this number grows quietly, so it is surfaced rather than left for the user
+ * to discover in Explorer.
+ */
+export interface RecordingsStats {
+  files: number
+  bytes: number
+}
+
+/**
+ * How a recording is addressed (§6.8). Main registers the scheme and serves
+ * it; the renderer puts the result in an <audio src>. Spelled once, here, so
+ * the two cannot drift — they did once, and every recording 404'd.
+ *
+ * The `clip` host is load-bearing. The scheme is `standard`, so Chromium
+ * canonicalises the host as a hostname, and an all-numeric host becomes an
+ * IPv4 address:
+ *
+ *     wispr-audio://123      ->  wispr-audio://0.0.0.123/
+ *     wispr-audio://clip/123 ->  unchanged
+ *
+ * The id therefore lives in the PATH. Never move it back to the host.
+ */
+export const AUDIO_SCHEME = 'wispr-audio'
+export const AUDIO_HOST = 'clip'
+
+export function audioUrl(dictationId: number): string {
+  return `${AUDIO_SCHEME}://${AUDIO_HOST}/${dictationId}`
+}
+
+/** Bytes as something a person reads. Binary units — this is disk. */
+export function formatBytes(bytes: number): string {
+  if (bytes <= 0) return '0 MB'
+  const mb = bytes / (1024 * 1024)
+  if (mb < 1) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`
+  return `${(mb / 1024).toFixed(1)} GB`
 }
 
 /** Wire-safe dictation. `createdAt` is epoch ms, not a Date — IPC serialises. */
@@ -44,6 +91,17 @@ export interface DictationDto {
   grammarFixes: number
   dictionaryFixes: number
   favorite: boolean
+  /**
+   * Whether a recording exists for this row (§8). Deliberately a boolean and
+   * not the filename: the renderer plays `wispr-audio://<id>` and never names
+   * a file, so handing it one would only be an invitation.
+   *
+   * False for every row written before Phase 6 — those render a disabled
+   * control, not a broken one.
+   */
+  hasAudio: boolean
+  /** Bytes on disk, for the row's tooltip. Null when there is no recording. */
+  audioBytes: number | null
   createdAt: number
 }
 
@@ -56,6 +114,10 @@ export interface NewDictationDto {
   enhanced?: boolean
   grammarFixes?: number
   dictionaryFixes?: number
+  /** Filename only, never a path — see main/audio/store.ts. */
+  audioFile?: string | null
+  audioBytes?: number | null
+  audioMime?: string | null
 }
 
 export interface ListDictationsQuery {
@@ -266,7 +328,7 @@ export interface ApiKeyStatus {
 
 /* ----------------------------------------------------------- settings ---- */
 
-/** Tabs in the settings window's own sidebar. */
+/** Tabs in the settings dialog's own rail. */
 export type SettingsTab = 'general' | 'transcription' | 'data' | 'about'
 
 /**
@@ -304,6 +366,8 @@ export interface IpcMap {
   'dictionary:create': [NewDictionaryDto, DictionaryWrite]
   'dictionary:update': [{ id: number } & NewDictionaryDto, DictionaryWrite]
   'dictionary:delete': [number, boolean]
+  'recordings:stats': [void, RecordingsStats]
+  'recordings:clear': [void, RecordingsStats]
   'clipboard:write': [string, void]
   'apiKey:status': [void, ApiKeyStatus]
   'apiKey:set': [string, ApiKeyStatus]
@@ -319,7 +383,7 @@ export interface IpcMap {
 
 /**
  * Destinations in the main window. Settings is deliberately absent: it is a
- * separate window now, not a page here.
+ * dialog over whichever of these you are on, not a page of its own.
  */
 export type AppRoute = 'history' | 'insights' | 'dictionary' | 'transform'
 

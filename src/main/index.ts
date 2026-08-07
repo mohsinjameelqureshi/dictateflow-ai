@@ -1,5 +1,8 @@
 import { BrowserWindow, app, session as electronSession } from 'electron'
 import { closeDb, initDb } from '../db/client.js'
+import { runAudioMaintenance } from './audio/maintenance.js'
+import { registerAudioProtocol, registerAudioScheme } from './audio/protocol.js'
+import { AUDIO_SCHEME } from '../shared/types.js'
 import { registerIpcHandlers } from './ipc/handlers.js'
 import { readFlag } from './settings.js'
 import { applyLoginItem } from './startup.js'
@@ -23,6 +26,11 @@ if (!app.requestSingleInstanceLock()) {
     }
   })
 
+  // Before whenReady, not inside it — registering a privileged scheme after
+  // the app is ready throws, and the privileges are what let an <audio>
+  // element range-request the file at all (§6.8).
+  registerAudioScheme()
+
   // Must match `appId` in electron-builder.yml. Windows keys the taskbar
   // button — and the icon it shows — off this, not off the window. Without it
   // the app groups under the generic Electron entry in dev.
@@ -41,12 +49,20 @@ if (!app.requestSingleInstanceLock()) {
               ? // `blob:` in script-src/worker-src is load-bearing, not cosmetic:
                 // the AudioWorklet module is a Blob URL, and an explicit
                 // script-src overrides default-src for it.
-                "default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' ws: http://localhost:*"
+                // `media-src` is spelled out even though `default-src` would
+                // cover it: the custom scheme is not in default-src, and
+                // without this playback works in production but not in dev.
+                `default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; media-src 'self' blob: ${AUDIO_SCHEME}:; connect-src 'self' ws: http://localhost:*`
               : // `blob:` in script-src is for the AudioWorklet, which is
                 // loaded from a Blob URL (worklets are governed by script-src).
                 // Nothing remote is ever loaded — the Groq call happens in the
                 // main process, which is why connect-src stays at 'self'.
-                "default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:",
+                //
+                // `media-src wispr-audio:` is what lets history play a
+                // recording (§6.8). It is deliberately narrower than adding
+                // file: — the scheme resolves an ID through the database, so
+                // the renderer cannot name a path.
+                `default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' ${AUDIO_SCHEME}:; connect-src 'self'; worker-src 'self' blob:`,
           ],
         },
       })
@@ -69,11 +85,18 @@ if (!app.requestSingleInstanceLock()) {
     )
 
     initDb()
+    // After initDb — the handler resolves a dictation id through the database,
+    // so there must be a database to resolve it against.
+    registerAudioProtocol()
     registerIpcHandlers()
 
     // Reconcile the OS login item with what the settings table says, so the
     // toggle is self-healing if the two ever drift.
     applyLoginItem(readFlag('launchOnStartup'))
+
+    // Retention and the orphan sweep (§8). After initDb, before any window
+    // can ask for a recording that expiry is about to remove.
+    runAudioMaintenance()
 
     // The widget is created once and hidden between dictations, so its
     // AudioContext and worklet stay warm (§11, spikes/README.md).

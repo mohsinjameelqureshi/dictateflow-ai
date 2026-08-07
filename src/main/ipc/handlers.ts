@@ -1,5 +1,6 @@
 import { BrowserWindow, app, clipboard, ipcMain } from 'electron'
 import {
+  clearAudioColumns,
   countDictations,
   createDictation,
   deleteDictation,
@@ -26,6 +27,7 @@ import {
   type ListDictationsQuery,
   type NewDictationDto,
   type NewDictionaryDto,
+  type RecordingsStats,
   type ResolvedTheme,
   type SettingKey,
   type Settings,
@@ -34,10 +36,11 @@ import {
 } from '../../shared/types.js'
 import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
 import { listAudioInputs, receiveAudioInputs } from '../audio/devices.js'
+import { clearRecordings, recordingsSize } from '../audio/store.js'
 import { session } from '../dictation/session.js'
 import { readSettings, writeSetting } from '../settings.js'
 import { onShortcutChanged, setShortcutSuspended } from '../shortcut/index.js'
-import { openSettingsWindow } from '../windows/settings-window.js'
+import { openSettings } from '../windows/main-window.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -85,12 +88,12 @@ export function registerIpcHandlers(): void {
   })
 
   handle(IPC.settingsOpen, (tab: SettingsTab | undefined) => {
-    openSettingsWindow(tab)
+    openSettings(tab)
   })
 
   /* -------------------------------------------------------- shortcut ---- */
 
-  // Held only while the settings window is recording a combo, so the OLD
+  // Held only while the settings dialog is recording a combo, so the OLD
   // shortcut cannot fire a dictation the moment the user presses it to show
   // what they are replacing.
   handle(IPC.shortcutSuspend, (suspended: boolean) => {
@@ -191,6 +194,20 @@ export function registerIpcHandlers(): void {
   )
 
   handle(IPC.dictionaryDelete, (id: number): boolean => deleteRule(id))
+
+  /* ------------------------------------------------------ recordings ---- */
+
+  handle(IPC.recordingsStats, (): RecordingsStats => recordingsSize())
+
+  // Clears the files AND the columns that referenced them, in that order —
+  // a row still claiming audio after the file is gone would render a Play
+  // button that fails on click (§13 "degrade honestly").
+  handle(IPC.recordingsClear, (): RecordingsStats => {
+    clearRecordings()
+    clearAudioColumns()
+    broadcastDictationsChanged()
+    return recordingsSize()
+  })
 
   /* ------------------------------------------------------- clipboard ---- */
 

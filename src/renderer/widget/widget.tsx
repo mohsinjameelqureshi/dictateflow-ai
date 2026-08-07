@@ -56,12 +56,11 @@ function Icon({ state }: { state: WidgetState }) {
 
 export function Widget() {
   const [payload, setPayload] = useState<WidgetStatePayload>({ state: 'cancelled' })
-  const [level, setLevel] = useState(0)
 
   // The recorder outlives every render — rebuilding it would drop the warm
   // AudioContext that exists precisely to avoid clipping the first syllable.
   const recorderRef = useRef<Recorder | null>(null)
-  if (!recorderRef.current) recorderRef.current = new Recorder(setLevel)
+  if (!recorderRef.current) recorderRef.current = new Recorder()
   const recorder = recorderRef.current
 
   useEffect(() => {
@@ -109,11 +108,9 @@ export function Widget() {
             })
             return
           case 'stop':
-            setLevel(0)
             void window.wisprWidget.sendClip(recorder.stop())
             return
           case 'cancel':
-            setLevel(0)
             recorder.cancel()
         }
       }),
@@ -139,7 +136,7 @@ export function Widget() {
         <Icon state={state} />
 
         {state === 'listening' ? (
-          <Waveform level={level} />
+          <Waveform recorder={recorder} />
         ) : (
           <span className={`truncate text-sm font-medium ${TONE[state] ?? 'text-ink'}`}>
             {label}

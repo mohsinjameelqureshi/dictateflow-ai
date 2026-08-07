@@ -36,6 +36,15 @@
   --color-success: #15803d;
 
   /**
+   * The scrim behind a modal. Its own token rather than `ink` at an opacity:
+   * ink is near-WHITE on dark, so reusing it would wash the window out instead
+   * of dimming it. Both values are a dark neutral — a scrim darkens in both
+   * themes, and goes further on dark where the panel has less to stand out
+   * against.
+   */
+  --color-scrim: oklch(0% 0 0 / 0.32);
+
+  /**
    * Keycaps. A deliberate exception to §12's "one accent colour": these mark
    * physical keys the user is being told to press, which is a different job
    * from the indigo that marks the active nav item or the primary button.
@@ -94,6 +103,8 @@
 
   --color-danger: #f87171;
   --color-success: #4ade80;
+
+  --color-scrim: oklch(0% 0 0 / 0.55);
 
   /* The cap stays amber on dark — it is an opaque chip, so it carries its own
      contrast. Only the edge moves, to sit against the darker surface. */

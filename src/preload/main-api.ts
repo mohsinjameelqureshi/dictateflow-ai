@@ -13,6 +13,7 @@ import type {
   ListDictationsQuery,
   NewDictationDto,
   NewDictionaryDto,
+  RecordingsStats,
   ResolvedTheme,
   SettingKey,
   Settings,
@@ -42,7 +43,11 @@ export const mainApi = {
   settings: {
     getAll: (): Promise<Settings> => invoke(IPC.settingsGetAll),
     set: (key: SettingKey, value: string): Promise<void> => invoke(IPC.settingsSet, { key, value }),
-    /** Settings is its own window — this is how the main window asks for it. */
+    /**
+     * Raise the main window and open the settings dialog on a tab. The
+     * sidebar's own Settings button does not need this — it is already in that
+     * window and sets the state directly.
+     */
     open: (tab?: SettingsTab): Promise<void> => invoke(IPC.settingsOpen, tab),
     /** Fires on every write, so a shown setting cannot go stale. */
     onChanged: (cb: (settings: Settings) => void): (() => void) => {
@@ -50,7 +55,7 @@ export const mainApi = {
       ipcRenderer.on(IPC_EVENT.settingsChanged, listener)
       return () => ipcRenderer.off(IPC_EVENT.settingsChanged, listener)
     },
-    /** The tray can request a tab once the window is already up. */
+    /** The tray asking for Settings. Opens the dialog as well as selecting. */
     onNavigate: (cb: (tab: SettingsTab) => void): (() => void) => {
       const listener = (_e: unknown, tab: SettingsTab) => cb(tab)
       ipcRenderer.on(IPC_EVENT.settingsNavigate, listener)
@@ -112,6 +117,12 @@ export const mainApi = {
     update: (id: number, input: NewDictionaryDto): Promise<DictionaryWrite> =>
       invoke(IPC.dictionaryUpdate, { id, ...input }),
     remove: (id: number): Promise<boolean> => invoke(IPC.dictionaryDelete, id),
+  },
+  recordings: {
+    /** Files and bytes under userData/recordings. No paths cross the bridge. */
+    stats: (): Promise<RecordingsStats> => invoke(IPC.recordingsStats),
+    /** Deletes every recording and clears the rows' audio columns. */
+    clear: (): Promise<RecordingsStats> => invoke(IPC.recordingsClear),
   },
   clipboard: {
     /** Main owns this: a file:// page has no `navigator.clipboard`. */

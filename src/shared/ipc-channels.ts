@@ -15,7 +15,8 @@ export const IPC = {
   /* settings */
   settingsGetAll: 'settings:getAll',
   settingsSet: 'settings:set',
-  /** Settings lives in its own window; this is how anything asks for it. */
+  /** Settings is a dialog in the main window; this is how main is asked to
+      raise that window and open it. */
   settingsOpen: 'settings:open',
 
   /* Pauses the global hook while the user records a new combo, so the OLD
@@ -49,6 +50,10 @@ export const IPC = {
   dictionaryCreate: 'dictionary:create',
   dictionaryUpdate: 'dictionary:update',
   dictionaryDelete: 'dictionary:delete',
+
+  /* recordings on disk (§8) — the renderer never sees a path, only totals */
+  recordingsStats: 'recordings:stats',
+  recordingsClear: 'recordings:clear',
 
   /* Copy-to-clipboard for history. Goes through main because a file:// page
      is not a secure context, so `navigator.clipboard` is unavailable there. */
@@ -84,7 +89,7 @@ export const IPC_EVENT = {
   dictationsChanged: 'dictations:changed',
   /** main -> main window: the tray asked for a page */
   navigate: 'app:navigate',
-  /** main -> settings window: select a tab */
+  /** main -> main window: open the settings dialog on a tab */
   settingsNavigate: 'settings:navigate',
   /** main -> every renderer: the resolved theme, light or dark */
   theme: 'app:theme',

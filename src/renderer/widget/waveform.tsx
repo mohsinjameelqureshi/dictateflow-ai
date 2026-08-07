@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { Recorder } from './recorder.js'
 
 const BARS = 18
 
-/** RMS of speech sits well below 1. Scale so normal talking fills the bar. */
-const GAIN = 5
+/** ~18 columns/second, so the 18 bars span about one second of speech. */
+const STEP_MS = 55
 
 /**
  * Live input level (§11 — Listening shows a mic and a live waveform).
@@ -11,32 +12,33 @@ const GAIN = 5
  * A scrolling history rather than a symmetric bounce: it reads as "we are
  * still hearing you", which is the actual question the user has while
  * holding the key.
+ *
+ * The level is PULLED from the recorder rather than pushed in as a prop. The
+ * capture worklet fires every 128 samples (~8ms at 16kHz); routing that
+ * through React state re-rendered the whole widget about 125 times a second
+ * to move 18 divs. The recorder now keeps a smoothed value and this samples
+ * it on the display cadence.
  */
-export function Waveform({ level }: { level: number }) {
+export function Waveform({ recorder }: { recorder: Recorder }) {
   const [bars, setBars] = useState<number[]>(() => new Array(BARS).fill(0))
-  const latest = useRef(0)
   const reduced = usePrefersReducedMotion()
 
-  latest.current = Math.min(1, level * GAIN)
-
   useEffect(() => {
-    if (reduced) return
-    // Sampled on a timer rather than per audio frame — the worklet fires
-    // every 128 samples (~8ms at 16kHz), far faster than anyone can see.
     const id = setInterval(() => {
-      setBars((prev) => [...prev.slice(1), latest.current])
-    }, 55)
+      setBars((prev) => [...prev.slice(1), recorder.level])
+    }, STEP_MS)
     return () => clearInterval(id)
-  }, [reduced])
+  }, [recorder])
 
   // Reduced motion still needs to show that input is arriving, so it shows a
   // single steady meter instead of a scrolling one.
   if (reduced) {
+    const level = bars[bars.length - 1] ?? 0
     return (
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-line-soft">
         <div
-          className="h-full rounded-full bg-accent"
-          style={{ width: `${Math.round(Math.min(1, level * GAIN) * 100)}%` }}
+          className="h-full rounded-full bg-accent transition-[width] duration-100"
+          style={{ width: `${Math.round(level * 100)}%` }}
         />
       </div>
     )

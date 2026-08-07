@@ -1,8 +1,14 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Download, RefreshCw, TriangleAlert, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
-import type { TransferResult } from '@shared/types.js'
-import { Row, Section } from './parts.js'
+import {
+  RETENTION_DAYS,
+  formatBytes,
+  type RecordingsStats,
+  type TransferResult,
+} from '@shared/types.js'
+import { Row, Section, Select, Toggle } from './parts.js'
+import type { SettingsStore } from './use-settings.js'
 
 /**
  * Export and import as JSON (§9).
@@ -11,7 +17,7 @@ import { Row, Section } from './parts.js'
  * wrongly: the API key is not in the file, and importing adds to what is
  * already here rather than replacing it.
  */
-export function DataTab() {
+export function DataTab({ settings, save }: SettingsStore) {
   const [busy, setBusy] = useState<'export' | 'import' | 'rebuild' | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -88,6 +94,8 @@ export function DataTab() {
         </Row>
       </Section>
 
+      <Recordings settings={settings} save={save} />
+
       <Section title="Maintenance">
         <Row
           label="Recalculate statistics"
@@ -113,4 +121,117 @@ export function DataTab() {
 
 function count(n: number, noun: string): string {
   return `${n.toLocaleString()} ${noun}${n === 1 ? '' : 's'}`
+}
+
+const retentionLabel = (days: number): string =>
+  days === 0 ? 'Keep everything' : `Delete after ${days} days`
+
+/**
+ * Recordings on disk (§8).
+ *
+ * The size is shown rather than left to be discovered: at roughly 1.9MB per
+ * spoken minute this grows quietly, and a user meeting it for the first time
+ * in Explorer is a user who has already lost trust in the app's housekeeping.
+ */
+function Recordings({ settings, save }: Pick<SettingsStore, 'settings' | 'save'>) {
+  const [stats, setStats] = useState<RecordingsStats | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  const refresh = useCallback(() => {
+    void window.wispr.recordings
+      .stats()
+      .then(setStats)
+      .catch(() => setStats(null))
+  }, [])
+
+  useEffect(refresh, [refresh])
+
+  // A confirmation left sitting on a destructive button is a trap.
+  useEffect(() => {
+    if (!confirming) return
+    const t = setTimeout(() => setConfirming(false), 5000)
+    return () => clearTimeout(t)
+  }, [confirming])
+
+  const clear = async () => {
+    setClearing(true)
+    try {
+      setStats(await window.wispr.recordings.clear())
+    } catch {
+      refresh()
+    } finally {
+      setClearing(false)
+      setConfirming(false)
+    }
+  }
+
+  const keeping = settings?.keepRecordings !== 'false'
+  const empty = !stats || stats.files === 0
+
+  return (
+    <Section
+      title="Recordings"
+      description="The audio behind each transcript, kept locally so you can hear what was actually said when a transcript looks wrong."
+    >
+      <Row
+        label="Keep recordings"
+        hint="Turning this off stops new recordings. It does not delete the ones you already have."
+      >
+        <Toggle
+          checked={keeping}
+          onChange={(next) => void save('keepRecordings', String(next))}
+          label="Keep recordings"
+        />
+      </Row>
+
+      <Row
+        label="Automatic cleanup"
+        hint="Applied when the app starts. Favorites are never deleted automatically — favoriting is how you say keep this."
+        htmlFor="retention"
+      >
+        <Select
+          id="retention"
+          value={settings?.recordingRetentionDays ?? '0'}
+          disabled={!keeping}
+          onChange={(next) => void save('recordingRetentionDays', next)}
+        >
+          {RETENTION_DAYS.map((days) => (
+            <option key={days} value={String(days)}>
+              {retentionLabel(days)}
+            </option>
+          ))}
+        </Select>
+      </Row>
+
+      <Row
+        label="Storage used"
+        hint={
+          empty
+            ? 'Nothing stored yet.'
+            : `${count(stats.files, 'recording')}. Transcripts are kept — only the audio is removed.`
+        }
+      >
+        {confirming ? (
+          <div className="flex items-center gap-1">
+            <Button variant="danger" onClick={() => void clear()} disabled={clearing}>
+              {clearing ? 'Deleting…' : 'Delete all'}
+            </Button>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              Keep
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-sm tabular-nums text-ink">
+              {formatBytes(stats?.bytes ?? 0)}
+            </span>
+            <Button variant="secondary" onClick={() => setConfirming(true)} disabled={empty}>
+              Delete all
+            </Button>
+          </div>
+        )}
+      </Row>
+    </Section>
+  )
 }

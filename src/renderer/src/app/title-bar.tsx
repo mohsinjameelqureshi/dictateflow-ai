@@ -10,28 +10,20 @@ import { cn } from '@/lib/utils.js'
  * Windows control order is minimise / maximise / close, left to right — do
  * not "tidy" it into macOS order.
  *
- * Shared with the settings window, which is not resizable — a maximise button
- * that does nothing is worse than one that is absent.
+ * It carried a `title` and a `maximizable` flag while Settings was a second,
+ * non-resizable window. Settings is a dialog now, this bar has exactly one
+ * caller, and both props were branches nothing could reach.
  *
- * The leading slot is either the window title or the sidebar toggle, never
- * both. In the main window the name is carried by the sidebar's brand lockup,
- * so repeating it here would be a second wordmark two centimetres away.
- * Settings has no sidebar and keeps the title.
+ * No wordmark in the leading slot: the name is carried by the sidebar's brand
+ * lockup, so repeating it here would be a second wordmark two centimetres
+ * away. The slot holds the sidebar toggle instead.
  */
-export function TitleBar({
-  title = 'Wispr AI',
-  maximizable = true,
-  sidebar,
-}: {
-  title?: string
-  maximizable?: boolean
-  sidebar?: { collapsed: boolean; onToggle: () => void }
-} = {}) {
+export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle: () => void } }) {
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
-    if (maximizable) void window.wispr.window.isMaximized().then(setMaximized)
-  }, [maximizable])
+    void window.wispr.window.isMaximized().then(setMaximized)
+  }, [])
 
   const controls = [
     {
@@ -40,16 +32,12 @@ export function TitleBar({
       onClick: () => void window.wispr.window.minimize(),
       danger: false,
     },
-    ...(maximizable
-      ? [
-          {
-            label: maximized ? 'Restore' : 'Maximize',
-            icon: maximized ? Copy : Square,
-            onClick: () => void window.wispr.window.maximize().then(setMaximized),
-            danger: false,
-          },
-        ]
-      : []),
+    {
+      label: maximized ? 'Restore' : 'Maximize',
+      icon: maximized ? Copy : Square,
+      onClick: () => void window.wispr.window.maximize().then(setMaximized),
+      danger: false,
+    },
     {
       label: 'Close',
       icon: X,
@@ -58,38 +46,27 @@ export function TitleBar({
     },
   ]
 
-  const toggleLabel = sidebar?.collapsed ? 'Show sidebar' : 'Hide sidebar'
+  const toggleLabel = sidebar.collapsed ? 'Show sidebar' : 'Hide sidebar'
 
   return (
-    <header
-      className={cn(
-        'drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface',
-        // The toggle is a hit target and carries its own padding; the title is
-        // text and needs the indent.
-        sidebar ? 'pl-1.5' : 'pl-5',
-      )}
-    >
-      {sidebar ? (
-        <div className="no-drag flex items-center">
-          <Tooltip label={toggleLabel}>
-            <button
-              onClick={sidebar.onToggle}
-              aria-label={toggleLabel}
-              aria-expanded={!sidebar.collapsed}
-              aria-controls="app-sidebar"
-              className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"
-            >
-              {sidebar.collapsed ? (
-                <PanelLeftOpen size={16} strokeWidth={2} />
-              ) : (
-                <PanelLeftClose size={16} strokeWidth={2} />
-              )}
-            </button>
-          </Tooltip>
-        </div>
-      ) : (
-        <span className="text-[13px] font-medium tracking-tight text-ink-muted">{title}</span>
-      )}
+    <header className="drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface pl-1.5">
+      <div className="no-drag flex items-center">
+        <Tooltip label={toggleLabel}>
+          <button
+            onClick={sidebar.onToggle}
+            aria-label={toggleLabel}
+            aria-expanded={!sidebar.collapsed}
+            aria-controls="app-sidebar"
+            className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"
+          >
+            {sidebar.collapsed ? (
+              <PanelLeftOpen size={16} strokeWidth={2} />
+            ) : (
+              <PanelLeftClose size={16} strokeWidth={2} />
+            )}
+          </button>
+        </Tooltip>
+      </div>
 
       <div className="no-drag flex h-full">
         {controls.map(({ label, icon: Icon, onClick, danger }) => (
