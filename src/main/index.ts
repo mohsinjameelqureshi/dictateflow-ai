@@ -1,7 +1,9 @@
 import { BrowserWindow, app, session as electronSession } from 'electron'
 import { closeDb, initDb } from '../db/client.js'
-import { applyLoginItem, registerIpcHandlers } from './ipc/handlers.js'
+import { registerIpcHandlers } from './ipc/handlers.js'
 import { readFlag } from './settings.js'
+import { applyLoginItem } from './startup.js'
+import { broadcastTheme, initTheme } from './theme.js'
 import { startShortcut, stopShortcut } from './shortcut/index.js'
 import { createTray } from './tray.js'
 import { createMainWindow } from './windows/main-window.js'
@@ -20,6 +22,11 @@ if (!app.requestSingleInstanceLock()) {
       win.focus()
     }
   })
+
+  // Must match `appId` in electron-builder.yml. Windows keys the taskbar
+  // button — and the icon it shows — off this, not off the window. Without it
+  // the app groups under the generic Electron entry in dev.
+  app.setAppUserModelId('com.mjq.wispr-ai')
 
   app.whenReady().then(() => {
     // Renderer runs no remote content, so lock the CSP down. Vite's dev
@@ -74,6 +81,11 @@ if (!app.requestSingleInstanceLock()) {
     createMainWindow()
     createTray()
     startShortcut()
+
+    // After the windows exist, so the first broadcast reaches them. Renderers
+    // also ask for the theme on mount, which covers a window opened later.
+    initTheme()
+    broadcastTheme()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

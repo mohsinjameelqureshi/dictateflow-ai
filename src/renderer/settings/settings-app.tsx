@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react'
-import { Info, Mic, SlidersHorizontal, TriangleAlert, type LucideIcon } from 'lucide-react'
+import {
+  Database,
+  Info,
+  Mic,
+  SlidersHorizontal,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react'
 import { TitleBar } from '@/app/title-bar.js'
+import { useTheme } from '@/lib/theme.js'
 import { cn } from '@/lib/utils.js'
 import type { SettingsTab } from '@shared/types.js'
 import { AboutTab } from './about-tab.js'
+import { DataTab } from './data-tab.js'
 import { GeneralTab } from './general-tab.js'
 import { TranscriptionTab } from './transcription-tab.js'
 import { useSettings } from './use-settings.js'
@@ -17,12 +26,15 @@ import { useSettings } from './use-settings.js'
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'transcription', label: 'Transcription', icon: Mic },
+  { id: 'data', label: 'Data', icon: Database },
   { id: 'about', label: 'About', icon: Info },
 ]
 
 export function SettingsApp() {
   const [tab, setTab] = useState<SettingsTab>('general')
   const store = useSettings()
+
+  useTheme(window.wispr.theme)
 
   // The tray, or the main window, can ask for a specific tab.
   useEffect(() => window.wispr.settings.onNavigate(setTab), [])
@@ -67,6 +79,7 @@ export function SettingsApp() {
 
           {tab === 'general' && <GeneralTab {...store} />}
           {tab === 'transcription' && <TranscriptionTab {...store} />}
+          {tab === 'data' && <DataTab />}
           {tab === 'about' && <AboutTab />}
         </main>
       </div>

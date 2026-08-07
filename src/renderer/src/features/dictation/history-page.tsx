@@ -5,6 +5,7 @@ import { Empty, Page } from '@/components/page.js'
 import { cn } from '@/lib/utils.js'
 import type { DictationDto } from '@shared/types.js'
 import { DictationCard } from './dictation-card.js'
+import { ShortcutHint } from './shortcut-hint.js'
 
 const PAGE = 50
 
@@ -78,7 +79,9 @@ export function HistoryPage() {
 
   return (
     <Page
-      title="History"
+      // Matches the nav label — a page headed "History" under a nav item
+      // called "Dictation" reads as two different places.
+      title="Dictation"
       description="Everything you have dictated, stored locally."
       actions={
         <Button
@@ -91,6 +94,8 @@ export function HistoryPage() {
         </Button>
       }
     >
+      <ShortcutHint />
+
       <div className="mb-5 flex items-center gap-2 rounded-lg border border-line bg-panel px-3 focus-within:border-accent">
         <Search size={15} className="shrink-0 text-ink-subtle" />
         <input

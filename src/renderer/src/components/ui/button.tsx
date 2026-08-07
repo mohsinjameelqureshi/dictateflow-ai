@@ -8,10 +8,12 @@ const button = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent text-white hover:bg-accent-hover',
+        // `on-solid`, not `white`: dark mode's accent is a LIGHT indigo, and
+        // white on it measures about 2.3:1. The token flips with the theme.
+        primary: 'bg-accent text-on-solid hover:bg-accent-hover',
         secondary: 'bg-panel text-ink border border-line hover:bg-line-soft',
         ghost: 'text-ink-muted hover:bg-line-soft hover:text-ink',
-        danger: 'bg-danger text-white hover:brightness-95',
+        danger: 'bg-danger text-on-solid hover:brightness-95',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',

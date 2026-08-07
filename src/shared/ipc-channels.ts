@@ -34,6 +34,15 @@ export const IPC = {
 
   /* insights — totals, streaks and the heatmap, derived per §8 */
   insightsGet: 'insights:get',
+  /** Rebuilds dailyStats from dictations. The repair path for a drifted aggregate. */
+  statsRebuild: 'stats:rebuild',
+
+  /* theme — main resolves 'system', renderers only ever see light or dark */
+  themeGet: 'theme:get',
+
+  /* export / import as JSON (§9) */
+  dataExport: 'data:export',
+  dataImport: 'data:import',
 
   /* personal dictionary — ships in v1 (§9) */
   dictionaryList: 'dictionary:list',
@@ -77,6 +86,10 @@ export const IPC_EVENT = {
   navigate: 'app:navigate',
   /** main -> settings window: select a tab */
   settingsNavigate: 'settings:navigate',
+  /** main -> every renderer: the resolved theme, light or dark */
+  theme: 'app:theme',
+  /** main -> every window: a setting changed, here is the whole table */
+  settingsChanged: 'settings:changed',
 } as const
 
 /**

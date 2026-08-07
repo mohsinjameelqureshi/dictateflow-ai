@@ -7,33 +7,20 @@ import type { DayStat } from '@shared/types.js'
  * Words per day, a year at a time.
  *
  * Sequential encoding — the value is magnitude, so it is ONE hue stepped
- * light→dark, never a rainbow. The ramp is the app's own indigo (§12: one
- * accent, everything else greyscale), stepped so each bin is visibly distinct
- * and the lightest still reads against the white panel:
- *
- *   #818cf8 → #6366f1 → #4338ca → #312e81
- *
- * Validated as an ordinal ramp — monotone lightness, adjacent ΔL ≥ 0.06,
- * light end 2.98:1 on #ffffff, hue spread 2°. Do not "brighten" a step
- * without re-checking those four.
+ * light→dark, never a rainbow. The steps themselves live in theme.css, where
+ * both modes are declared: dark is a re-validated set against the dark panel,
+ * not the light ramp inverted, and its anchor flips so "more" is brighter.
+ * The measured numbers and the rules for changing them are in that file.
  */
-const RAMP = ['#818cf8', '#6366f1', '#4338ca', '#312e81'] as const
+const RAMP = [
+  'var(--color-heat-1)',
+  'var(--color-heat-2)',
+  'var(--color-heat-3)',
+  'var(--color-heat-4)',
+] as const
 
-/**
- * Zero is not the bottom of the ramp — it is the absence of one, so it is
- * grey rather than the palest indigo.
- *
- * MEASURED: this was `--color-line-soft` (#f4f4f5), which is **1.10:1** on the
- * white panel. That is invisible on any display whose gamma does not happen to
- * flatter it — it rendered on a laptop panel and vanished entirely on an
- * external monitor. Empty cells are most of the grid, so they are structure,
- * not decoration.
- *
- * #d4d4d8 measures 1.48:1 — visible, and still far below the lightest data
- * step at 2.98:1, so "more is darker" still reads across the whole scale.
- * Do not lighten this back toward the surface.
- */
-const EMPTY = '#d4d4d8'
+/** Zero is the ABSENCE of a value, not the bottom of the ramp — so, grey. */
+const EMPTY = 'var(--color-heat-empty)'
 
 const CELL = 13
 const GAP = 3
@@ -57,6 +44,18 @@ function binOf(words: number, max: number): number {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+/**
+ * What the hover bubble shows: the session count, nothing else.
+ *
+ * `describe` below stays as each cell's accessible name — a screen-reader user
+ * moving through the grid has no other way to tell which day they are on, and
+ * "37 sessions" alone would be unplaceable among 371 cells.
+ */
+const sessionLabel = (stat: DayStat): string => {
+  if (stat.sessions === 0) return 'No sessions'
+  return `${stat.sessions} ${stat.sessions === 1 ? 'session' : 'sessions'}`
+}
+
 const describe = (stat: DayStat): string => {
   const date = parseDay(stat.day)
   const when = `${MONTHS[date.getMonth()] ?? ''} ${date.getDate()}, ${date.getFullYear()}`
@@ -76,7 +75,7 @@ export function Heatmap({ days }: { days: DayStat[] }) {
    */
   const [anchor, setAnchor] = useState<TooltipAnchor | null>(null)
   const point = (e: { currentTarget: HTMLElement }, day: DayStat) =>
-    setAnchor({ rect: e.currentTarget.getBoundingClientRect(), label: describe(day) })
+    setAnchor({ rect: e.currentTarget.getBoundingClientRect(), label: sessionLabel(day) })
 
   const max = useMemo(() => days.reduce((n, d) => Math.max(n, d.words), 0), [days])
 

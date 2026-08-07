@@ -1,6 +1,8 @@
 import { BrowserWindow, app, shell } from 'electron'
 import { join } from 'node:path'
+import { appIcon } from '../app-icon.js'
 import { readFlag } from '../settings.js'
+import { windowBackground } from '../theme.js'
 
 /**
  * The main window. Frameless with a custom title bar (§12) — default Windows
@@ -41,7 +43,10 @@ export function createMainWindow(): BrowserWindow {
     minHeight: 560,
     show: false,
     frame: false,
-    backgroundColor: '#fbfbfd',
+    icon: appIcon(),
+    // Matches the theme before the renderer has painted anything — otherwise
+    // a dark-mode launch flashes a white rectangle.
+    backgroundColor: windowBackground(),
     // Keeps the OS window controls available to the custom bar on Windows.
     titleBarStyle: 'hidden',
     titleBarOverlay: false,

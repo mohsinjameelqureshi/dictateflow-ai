@@ -7,7 +7,11 @@ import {
   setFavorite,
 } from '../../db/dictations.js'
 import { createRule, deleteRule, listDictionary, updateRule } from '../../db/dictionary.js'
-import { getInsights } from '../../db/stats.js'
+import { getInsights, rebuildDailyStats } from '../../db/stats.js'
+import { broadcastDictationsChanged, broadcastSettings } from '../broadcast.js'
+import { exportData, importData } from '../data-transfer.js'
+import { applyLoginItem } from '../startup.js'
+import { applyTheme, resolvedTheme } from '../theme.js'
 import { IPC } from '../../shared/ipc-channels.js'
 import {
   type ApiKeyStatus,
@@ -22,9 +26,11 @@ import {
   type ListDictationsQuery,
   type NewDictationDto,
   type NewDictionaryDto,
+  type ResolvedTheme,
   type SettingKey,
   type Settings,
   type SettingsTab,
+  type TransferResult,
 } from '../../shared/types.js'
 import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
 import { listAudioInputs, receiveAudioInputs } from '../audio/devices.js'
@@ -75,6 +81,7 @@ export function registerIpcHandlers(): void {
   handle(IPC.settingsSet, ({ key, value }: { key: SettingKey; value: string }) => {
     writeSetting(key, value)
     applySettingEffect(key, value)
+    broadcastSettings(readSettings())
   })
 
   handle(IPC.settingsOpen, (tab: SettingsTab | undefined) => {
@@ -144,6 +151,27 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.insightsGet, (): InsightsDto => getInsights())
 
+  handle(IPC.statsRebuild, () => {
+    rebuildDailyStats()
+  })
+
+  /* ----------------------------------------------------------- theme ---- */
+
+  handle(IPC.themeGet, (): ResolvedTheme => resolvedTheme())
+
+  /* -------------------------------------------------- export / import ---- */
+
+  handle(IPC.dataExport, (_arg, event): Promise<TransferResult> =>
+    exportData(senderWindow(event)),
+  )
+
+  handle(IPC.dataImport, async (_arg, event): Promise<TransferResult> => {
+    const result = await importData(senderWindow(event))
+    // History, insights and the dictionary are all stale now.
+    if (result.status === 'done') broadcastDictationsChanged()
+    return result
+  })
+
   /* ------------------------------------------------------ dictionary ---- */
 
   handle(IPC.dictionaryList, (): DictionaryDto[] => listDictionary())
@@ -203,14 +231,12 @@ function applySettingEffect(key: SettingKey, value: string): void {
     case 'launchOnStartup':
       applyLoginItem(value === 'true')
       return
+    case 'theme':
+      // Resolves 'system' and pushes the answer to all three windows.
+      applyTheme(value)
+      return
     default:
       // `microphoneId`, `language` and friends are read at the point of use.
       return
   }
-}
-
-export function applyLoginItem(openAtLogin: boolean): void {
-  // Dev runs would register the Electron binary itself as a startup item.
-  if (!app.isPackaged) return
-  app.setLoginItemSettings({ openAtLogin, path: process.execPath })
 }

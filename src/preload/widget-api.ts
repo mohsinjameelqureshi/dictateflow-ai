@@ -3,6 +3,7 @@ import { IPC, IPC_EVENT } from '../shared/ipc-channels.js'
 import type {
   AudioInputDevice,
   ClipPayload,
+  ResolvedTheme,
   WidgetCommand,
   WidgetStatePayload,
 } from '../shared/types.js'
@@ -48,6 +49,21 @@ export const widgetApi = {
 
   sendDevices: (requestId: number, devices: AudioInputDevice[]): Promise<void> =>
     ipcRenderer.invoke(IPC.widgetDevices, { requestId, devices }) as Promise<void>,
+
+  /**
+   * The widget cannot read settings — its surface is deliberately mic-only
+   * (§6.7) — so the resolved theme is handed to it rather than looked up.
+   * Same shape as the main window's, so one hook drives both.
+   */
+  theme: {
+    get: (): Promise<ResolvedTheme> =>
+      ipcRenderer.invoke(IPC.themeGet) as Promise<ResolvedTheme>,
+    onChange: (cb: (theme: ResolvedTheme) => void): (() => void) => {
+      const listener = (_e: unknown, theme: ResolvedTheme) => cb(theme)
+      ipcRenderer.on(IPC_EVENT.theme, listener)
+      return () => ipcRenderer.off(IPC_EVENT.theme, listener)
+    },
+  },
 } as const
 
 export type WidgetApi = typeof widgetApi

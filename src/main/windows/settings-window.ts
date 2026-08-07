@@ -2,7 +2,9 @@ import { BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { IPC_EVENT } from '../../shared/ipc-channels.js'
 import type { SettingsTab } from '../../shared/types.js'
+import { appIcon } from '../app-icon.js'
 import { setShortcutSuspended } from '../shortcut/index.js'
+import { windowBackground } from '../theme.js'
 
 /**
  * Settings, as its own window.
@@ -41,7 +43,10 @@ export function openSettingsWindow(tab?: SettingsTab): BrowserWindow {
     minHeight: 520,
     show: false,
     frame: false,
-    backgroundColor: '#fbfbfd',
+    icon: appIcon(),
+    // Settings opens on demand, long after the startup broadcast, so it reads
+    // the current theme itself rather than flashing light and correcting.
+    backgroundColor: windowBackground(),
     titleBarStyle: 'hidden',
     titleBarOverlay: false,
     autoHideMenuBar: true,

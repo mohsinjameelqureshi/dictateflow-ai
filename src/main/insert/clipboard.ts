@@ -16,8 +16,16 @@ import { Key, keyboard } from '@nut-tree-fork/nut-js'
  */
 keyboard.config.autoDelayMs = 0
 
-/** Long enough for the target app to service WM_PASTE, short enough not to annoy. */
-const RESTORE_DELAY_MS = 150
+/**
+ * Long enough for the target app to service WM_PASTE, short enough not to
+ * annoy. Restoring too early takes the text back before the target has read
+ * it, and the paste silently produces nothing.
+ */
+const DEFAULT_RESTORE_DELAY_MS = 150
+
+/** Clamped: a stored 0 would race the paste, and a huge value would strand it. */
+const MIN_RESTORE_DELAY_MS = 50
+const MAX_RESTORE_DELAY_MS = 2000
 
 interface ClipboardSnapshot {
   text: string
@@ -44,8 +52,12 @@ function restore(prev: ClipboardSnapshot, wrote: string): void {
   else clipboard.clear()
 }
 
-export async function insertText(text: string): Promise<void> {
+export async function insertText(text: string, restoreDelayMs?: number): Promise<void> {
   if (!text) return
+
+  const delay = Number.isFinite(restoreDelayMs)
+    ? Math.min(Math.max(restoreDelayMs as number, MIN_RESTORE_DELAY_MS), MAX_RESTORE_DELAY_MS)
+    : DEFAULT_RESTORE_DELAY_MS
 
   const previous = snapshot()
   clipboard.writeText(text)
@@ -60,5 +72,5 @@ export async function insertText(text: string): Promise<void> {
       // Another process can hold the clipboard open. Not worth surfacing —
       // the text the user asked for is already inserted.
     }
-  }, RESTORE_DELAY_MS)
+  }, delay)
 }

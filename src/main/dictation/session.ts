@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron'
 import { desc, eq, sql } from 'drizzle-orm'
 import { getDb, schema } from '../../db/client.js'
 import { createDictation } from '../../db/dictations.js'
@@ -16,11 +15,12 @@ import {
   buildVocabularyHint,
   type DictionaryRule,
 } from '../../services/enhance/dictionary.js'
+import { broadcastDictationsChanged } from '../broadcast.js'
 import { insertText } from '../insert/clipboard.js'
 import { captureTarget, type InsertTarget } from '../insert/target.js'
 import { getApiKey } from '../secrets.js'
 import { readSettings } from '../settings.js'
-import { getWidgetWindow, hideWidget, sendToWidget, showWidget } from '../windows/widget-window.js'
+import { hideWidget, sendToWidget, showWidget } from '../windows/widget-window.js'
 
 /**
  * The capture loop (§13 Phase 2). Key-down to inserted text.
@@ -223,7 +223,7 @@ class DictationSession {
 
     this.#state('inserting')
     try {
-      await insertText(replaced.text)
+      await insertText(replaced.text, Number(settings.typingDelayMs))
     } catch (err) {
       persist(rawText, replaced.text, meta.durationMs, providerId, replaced.fixes)
       this.#settle('error', err instanceof Error ? err.message : 'Could not insert the text.')
@@ -326,10 +326,7 @@ function persist(
       grammarFixes: 0,
       dictionaryFixes,
     })
-    const widget = getWidgetWindow()
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (win !== widget) win.webContents.send(IPC_EVENT.dictationsChanged)
-    }
+    broadcastDictationsChanged()
   } catch {
     // A failed write must not swallow text the user already has inserted.
   }

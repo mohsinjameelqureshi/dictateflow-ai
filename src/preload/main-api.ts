@@ -13,9 +13,11 @@ import type {
   ListDictationsQuery,
   NewDictationDto,
   NewDictionaryDto,
+  ResolvedTheme,
   SettingKey,
   Settings,
   SettingsTab,
+  TransferResult,
 } from '../shared/types.js'
 
 /** Typed invoke — the channel decides both argument and return type. */
@@ -42,6 +44,12 @@ export const mainApi = {
     set: (key: SettingKey, value: string): Promise<void> => invoke(IPC.settingsSet, { key, value }),
     /** Settings is its own window — this is how the main window asks for it. */
     open: (tab?: SettingsTab): Promise<void> => invoke(IPC.settingsOpen, tab),
+    /** Fires on every write, so a shown setting cannot go stale. */
+    onChanged: (cb: (settings: Settings) => void): (() => void) => {
+      const listener = (_e: unknown, settings: Settings) => cb(settings)
+      ipcRenderer.on(IPC_EVENT.settingsChanged, listener)
+      return () => ipcRenderer.off(IPC_EVENT.settingsChanged, listener)
+    },
     /** The tray can request a tab once the window is already up. */
     onNavigate: (cb: (tab: SettingsTab) => void): (() => void) => {
       const listener = (_e: unknown, tab: SettingsTab) => cb(tab)
@@ -80,6 +88,22 @@ export const mainApi = {
   insights: {
     /** Totals, streaks and the heatmap, derived on read (§8). */
     get: (): Promise<InsightsDto> => invoke(IPC.insightsGet),
+    /** Recompute dailyStats from dictations — the repair path for a drift. */
+    rebuild: (): Promise<void> => invoke(IPC.statsRebuild),
+  },
+  theme: {
+    /** Always resolved — main decides what 'system' currently means. */
+    get: (): Promise<ResolvedTheme> => invoke(IPC.themeGet),
+    onChange: (cb: (theme: ResolvedTheme) => void): (() => void) => {
+      const listener = (_e: unknown, theme: ResolvedTheme) => cb(theme)
+      ipcRenderer.on(IPC_EVENT.theme, listener)
+      return () => ipcRenderer.off(IPC_EVENT.theme, listener)
+    },
+  },
+  data: {
+    /** Both open a native file dialog, so both can come back 'cancelled'. */
+    export: (): Promise<TransferResult> => invoke(IPC.dataExport),
+    import: (): Promise<TransferResult> => invoke(IPC.dataImport),
   },
   dictionary: {
     list: (): Promise<DictionaryDto[]> => invoke(IPC.dictionaryList),

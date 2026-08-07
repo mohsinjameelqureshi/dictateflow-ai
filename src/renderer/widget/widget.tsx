@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Ban, Check, Loader2, Mic, MicOff, TimerReset, TriangleAlert, WifiOff } from 'lucide-react'
 import type { WidgetState, WidgetStatePayload } from '@shared/types.js'
+import { useTheme } from '@/lib/theme.js'
 import { listAudioInputs } from './devices.js'
 import { Recorder } from './recorder.js'
 import { Waveform } from './waveform.js'
@@ -69,6 +70,11 @@ export function Widget() {
       /* Reported on the first real start(), where the user can see it. */
     })
   }, [recorder])
+
+  // The widget floats over the user's own screen, so it follows the app's
+  // theme like everything else — `getTheme`/`onTheme` rather than settings,
+  // which this surface deliberately cannot reach.
+  useTheme(window.wisprWidget.theme)
 
   useEffect(() => window.wisprWidget.onState(setPayload), [])
 

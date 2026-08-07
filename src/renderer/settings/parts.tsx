@@ -90,7 +90,9 @@ export function Toggle({
     >
       <span
         className={cn(
-          'absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-[left]',
+          // The knob rides both the accent fill and the neutral track, so it
+          // follows the same token as text on a solid fill.
+          'absolute top-0.5 size-5 rounded-full bg-on-solid shadow-sm transition-[left]',
           checked ? 'left-[22px]' : 'left-0.5',
         )}
       />

@@ -14,7 +14,16 @@ asarUnpack:
   # Native .node binaries cannot be loaded from inside an asar archive.
   - '**/*.node'
   - node_modules/better-sqlite3/**
+extraResources:
+  # The tray and the window icons load this at runtime by path. buildResources
+  # is excluded from the app package, and reading an image out of the asar is
+  # unreliable, so it is copied out beside the app — see src/main/app-icon.ts.
+  - from: build/icon.png
+    to: icon.png
 win:
+  # 1024x1024 with transparency. electron-builder generates the multi-size .ico
+  # for the .exe and the installer from it.
+  icon: build/icon.png
   target:
     - target: nsis
       arch: [x64]

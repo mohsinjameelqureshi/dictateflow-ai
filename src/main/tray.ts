@@ -1,6 +1,5 @@
-import { BrowserWindow, Menu, Tray, app, nativeImage } from 'electron'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { BrowserWindow, Menu, Tray, app } from 'electron'
+import { trayIcon } from './app-icon.js'
 import { createMainWindow, getMainWindow } from './windows/main-window.js'
 import { openSettingsWindow } from './windows/settings-window.js'
 
@@ -12,18 +11,6 @@ import { openSettingsWindow } from './windows/settings-window.js'
  * dictation.
  */
 let tray: Tray | null = null
-
-function icon() {
-  // electron-builder puts build/icon.png beside the app; fall back to an
-  // empty image rather than crashing the tray on a fresh checkout.
-  for (const p of [
-    join(app.getAppPath(), 'build', 'icon.png'),
-    join(app.getAppPath(), 'resources', 'icon.png'),
-  ]) {
-    if (existsSync(p)) return nativeImage.createFromPath(p).resize({ width: 16, height: 16 })
-  }
-  return nativeImage.createEmpty()
-}
 
 /**
  * The main window is named explicitly rather than found by scanning windows.
@@ -42,7 +29,7 @@ function focusMain(): BrowserWindow {
 export function createTray(): Tray {
   if (tray) return tray
 
-  tray = new Tray(icon())
+  tray = new Tray(trayIcon())
   tray.setToolTip('Wispr AI')
   tray.setContextMenu(
     Menu.buildFromTemplate([

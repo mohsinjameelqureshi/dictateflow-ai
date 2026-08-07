@@ -21,6 +21,40 @@ import type { DayStat, InsightsDto } from '../shared/types.js'
 /** 53 weeks, so the heatmap always shows a full year of columns. */
 const HEATMAP_DAYS = 371
 
+/**
+ * Recompute `dailyStats` from `dictations`, replacing it wholesale.
+ *
+ * Normally the aggregate is maintained incrementally, inside the same
+ * transaction as the insert or delete that caused it. That is correct but it
+ * is also one-way: nothing else could put it right if a row were ever lost, so
+ * a drift would have been permanent.
+ *
+ * Import needs this anyway — a file full of dictations arrives with no day
+ * rows — which is what makes it worth having as a repair path too.
+ */
+export function rebuildDailyStats(): void {
+  const db = getDb()
+
+  db.transaction((tx) => {
+    const rows = tx.select().from(schema.dictations).all()
+
+    const byDay = new Map<string, { words: number; sessions: number; durationMs: number }>()
+    for (const row of rows) {
+      const day = localDayKey(row.createdAt)
+      const acc = byDay.get(day) ?? { words: 0, sessions: 0, durationMs: 0 }
+      acc.words += row.words
+      acc.sessions += 1
+      acc.durationMs += row.durationMs
+      byDay.set(day, acc)
+    }
+
+    tx.delete(schema.dailyStats).run()
+    for (const [day, acc] of byDay) {
+      tx.insert(schema.dailyStats).values({ day, ...acc }).run()
+    }
+  })
+}
+
 export function getInsights(): InsightsDto {
   const rows = getDb().select().from(schema.dailyStats).orderBy(asc(schema.dailyStats.day)).all()
 

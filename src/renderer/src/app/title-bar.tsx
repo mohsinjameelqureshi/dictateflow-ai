@@ -1,4 +1,4 @@
-import { Minus, Square, X, Copy } from 'lucide-react'
+import { Minus, PanelLeftClose, PanelLeftOpen, Square, X, Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tooltip } from '@/components/ui/tooltip.js'
 import { cn } from '@/lib/utils.js'
@@ -12,13 +12,20 @@ import { cn } from '@/lib/utils.js'
  *
  * Shared with the settings window, which is not resizable — a maximise button
  * that does nothing is worse than one that is absent.
+ *
+ * The leading slot is either the window title or the sidebar toggle, never
+ * both. In the main window the name is carried by the sidebar's brand lockup,
+ * so repeating it here would be a second wordmark two centimetres away.
+ * Settings has no sidebar and keeps the title.
  */
 export function TitleBar({
   title = 'Wispr AI',
   maximizable = true,
+  sidebar,
 }: {
   title?: string
   maximizable?: boolean
+  sidebar?: { collapsed: boolean; onToggle: () => void }
 } = {}) {
   const [maximized, setMaximized] = useState(false)
 
@@ -51,9 +58,38 @@ export function TitleBar({
     },
   ]
 
+  const toggleLabel = sidebar?.collapsed ? 'Show sidebar' : 'Hide sidebar'
+
   return (
-    <header className="drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface pl-5">
-      <span className="text-[13px] font-medium tracking-tight text-ink-muted">{title}</span>
+    <header
+      className={cn(
+        'drag flex h-11 shrink-0 items-center justify-between border-b border-line bg-surface',
+        // The toggle is a hit target and carries its own padding; the title is
+        // text and needs the indent.
+        sidebar ? 'pl-1.5' : 'pl-5',
+      )}
+    >
+      {sidebar ? (
+        <div className="no-drag flex items-center">
+          <Tooltip label={toggleLabel}>
+            <button
+              onClick={sidebar.onToggle}
+              aria-label={toggleLabel}
+              aria-expanded={!sidebar.collapsed}
+              aria-controls="app-sidebar"
+              className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"
+            >
+              {sidebar.collapsed ? (
+                <PanelLeftOpen size={16} strokeWidth={2} />
+              ) : (
+                <PanelLeftClose size={16} strokeWidth={2} />
+              )}
+            </button>
+          </Tooltip>
+        </div>
+      ) : (
+        <span className="text-[13px] font-medium tracking-tight text-ink-muted">{title}</span>
+      )}
 
       <div className="no-drag flex h-full">
         {controls.map(({ label, icon: Icon, onClick, danger }) => (
@@ -63,7 +99,9 @@ export function TitleBar({
               aria-label={label}
               className={cn(
                 'flex h-full w-12 items-center justify-center text-ink-muted transition-colors',
-                danger ? 'hover:bg-danger hover:text-white' : 'hover:bg-line-soft hover:text-ink',
+                danger
+                  ? 'hover:bg-danger hover:text-on-solid'
+                  : 'hover:bg-line-soft hover:text-ink',
               )}
             >
               <Icon size={14} strokeWidth={2} />

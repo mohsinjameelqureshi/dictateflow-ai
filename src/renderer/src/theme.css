@@ -3,7 +3,11 @@
  * greyscale. Generous whitespace; density is not the goal.
  *
  * Tailwind v4 is CSS-first: there is no tailwind.config.js. Tokens live here,
- * shared by the main window and the widget so the two cannot drift apart.
+ * shared by all three windows so they cannot drift apart.
+ *
+ * Dark is a SELECTED set of steps, not an automatic inversion — every value
+ * below was chosen against the dark surface it actually renders on, and the
+ * heatmap ramp was re-validated there rather than flipped.
  */
 @theme {
   --color-surface: #fbfbfd;
@@ -21,11 +25,91 @@
   --color-accent-hover: #4338ca;
   --color-accent-soft: #eef2ff;
 
+  /**
+   * Text and icons sitting ON a solid accent or danger fill. White works on
+   * light mode's dark indigo; dark mode's accent is a LIGHT indigo, where
+   * white text would drop to about 2.3:1.
+   */
+  --color-on-solid: #ffffff;
+
   --color-danger: #dc2626;
   --color-success: #15803d;
+
+  /**
+   * Keycaps. A deliberate exception to §12's "one accent colour": these mark
+   * physical keys the user is being told to press, which is a different job
+   * from the indigo that marks the active nav item or the primary button.
+   * Keeping them off the accent is what stops "press this" reading as "this
+   * is selected". Used only for the shortcut hint.
+   */
+  --color-key: #fbbf24;
+  --color-key-edge: #18181b;
+  --color-key-ink: #18181b;
+
+  /**
+   * Heatmap ramp — sequential encoding, so one hue stepped light→dark.
+   * Validated as an ordinal ramp against #ffffff: monotone lightness,
+   * adjacent ΔL ≥ 0.06, light end 2.98:1, hue spread 2°.
+   *
+   * `heat-empty` is grey, not the palest indigo: zero is the ABSENCE of a
+   * value, not the bottom of the scale. It was #f4f4f5 once — 1.10:1, which
+   * is invisible on any display whose gamma does not flatter it. 1.48:1 now.
+   * Do not move either end toward the surface without re-validating.
+   */
+  --color-heat-empty: #d4d4d8;
+  --color-heat-1: #818cf8;
+  --color-heat-2: #6366f1;
+  --color-heat-3: #4338ca;
+  --color-heat-4: #312e81;
 
   --radius-panel: 12px;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+
+/**
+ * The resolved theme is stamped on <html> by each renderer. The main process
+ * owns the decision — including what 'system' currently means — so the three
+ * windows can never disagree about it.
+ */
+:root[data-theme='dark'] {
+  --color-surface: #0f0f11;
+  --color-panel: #17171a;
+
+  --color-ink: #f4f4f5;
+  --color-ink-muted: #a1a1aa;
+  --color-ink-subtle: #8b8b94;
+
+  --color-line: #2a2a30;
+  --color-line-soft: #202024;
+
+  /* The accent moves UP the ramp on dark — 6.00:1 on the panel. */
+  --color-accent: #818cf8;
+  --color-accent-hover: #a5b4fc;
+  --color-accent-soft: #232145;
+
+  /* Dark ink on a light accent fill, for the same reason white is used above. */
+  --color-on-solid: #17171a;
+
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+
+  /* The cap stays amber on dark — it is an opaque chip, so it carries its own
+     contrast. Only the edge moves, to sit against the darker surface. */
+  --color-key: #f5b32a;
+  --color-key-edge: #0b0b0d;
+  --color-key-ink: #17171a;
+
+  /**
+   * Re-validated against the dark panel (#17171a), not inverted: monotone
+   * lightness, adjacent ΔL ≥ 0.06, dim end 2.26:1, hue spread 3°. The anchor
+   * flips — on dark, "more" is BRIGHTER — and three of the four steps are
+   * shared with the light ramp.
+   */
+  --color-heat-empty: #3f3f46;
+  --color-heat-1: #4338ca;
+  --color-heat-2: #6366f1;
+  --color-heat-3: #818cf8;
+  --color-heat-4: #c7d2fe;
 }

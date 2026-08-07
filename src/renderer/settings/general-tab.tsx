@@ -1,6 +1,6 @@
 import type { SettingsStore } from './use-settings.js'
 import { MicrophoneField } from './microphone-field.js'
-import { Row, Section, Toggle } from './parts.js'
+import { Row, Section, Select, Toggle } from './parts.js'
 import { ShortcutField } from './shortcut-field.js'
 
 export function GeneralTab({ settings, save }: SettingsStore) {
@@ -31,6 +31,20 @@ export function GeneralTab({ settings, save }: SettingsStore) {
             value={settings?.microphoneId ?? ''}
             onSave={(id) => void save('microphoneId', id)}
           />
+        </Row>
+      </Section>
+
+      <Section title="Appearance">
+        <Row label="Theme" htmlFor="theme" hint="System follows Windows and changes with it.">
+          <Select
+            id="theme"
+            value={settings?.theme ?? 'light'}
+            onChange={(next) => void save('theme', next)}
+          >
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </Select>
         </Row>
       </Section>
 

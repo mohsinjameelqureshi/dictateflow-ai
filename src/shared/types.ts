@@ -65,6 +65,74 @@ export interface ListDictationsQuery {
   favoritesOnly?: boolean
 }
 
+/* --------------------------------------------------------------- theme ---- */
+
+/** What the user picked. 'system' follows the OS and changes with it. */
+export type ThemeChoice = 'light' | 'dark' | 'system'
+
+/** What that actually resolves to right now. Only the main process decides. */
+export type ResolvedTheme = 'light' | 'dark'
+
+export const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
+
+export function isThemeChoice(value: string): value is ThemeChoice {
+  return (THEME_CHOICES as string[]).includes(value)
+}
+
+/* ----------------------------------------------------------- transfer ---- */
+
+/**
+ * Export and import (§9). The file is plain JSON so it can be read, diffed and
+ * edited by hand — it is the user's data and there is nothing to hide in it.
+ *
+ * `dailyStats` is deliberately absent: it is derived, and rebuilding it on
+ * import is both smaller and safer than trusting a number in a file.
+ * The API key is absent too — safeStorage only, never JSON (§2).
+ */
+export const BACKUP_FORMAT = 1
+export const BACKUP_APP = 'wispr-ai'
+
+export interface BackupDictation {
+  rawText: string
+  finalText: string
+  durationMs: number
+  language: string
+  providerId: string
+  enhanced: boolean
+  grammarFixes: number
+  dictionaryFixes: number
+  favorite: boolean
+  createdAt: number
+}
+
+export interface BackupRule {
+  from: string
+  to: string
+  hitCount: number
+  createdAt: number
+}
+
+export interface BackupFile {
+  app: typeof BACKUP_APP
+  format: number
+  exportedAt: string
+  settings: Settings
+  dictionary: BackupRule[]
+  dictations: BackupDictation[]
+}
+
+export type TransferResult =
+  | { status: 'cancelled' }
+  | { status: 'error'; problem: string }
+  | {
+      status: 'done'
+      path: string
+      dictations: number
+      dictionary: number
+      /** Import only: rows already present, so not added twice. */
+      skipped: number
+    }
+
 /* ------------------------------------------------------------ insights ---- */
 
 /** One day in the heatmap. `day` is a local-time 'YYYY-MM-DD' key (§8). */
@@ -199,7 +267,7 @@ export interface ApiKeyStatus {
 /* ----------------------------------------------------------- settings ---- */
 
 /** Tabs in the settings window's own sidebar. */
-export type SettingsTab = 'general' | 'transcription' | 'about'
+export type SettingsTab = 'general' | 'transcription' | 'data' | 'about'
 
 /**
  * A microphone, as offered to the picker. Enumerated by the widget renderer —
@@ -228,6 +296,10 @@ export interface IpcMap {
   'dictations:setFavorite': [{ id: number; favorite: boolean }, DictationDto | null]
   'dictations:delete': [number, boolean]
   'insights:get': [void, InsightsDto]
+  'stats:rebuild': [void, void]
+  'theme:get': [void, ResolvedTheme]
+  'data:export': [void, TransferResult]
+  'data:import': [void, TransferResult]
   'dictionary:list': [void, DictionaryDto[]]
   'dictionary:create': [NewDictionaryDto, DictionaryWrite]
   'dictionary:update': [{ id: number } & NewDictionaryDto, DictionaryWrite]
@@ -259,6 +331,14 @@ export interface IpcEventMap {
   'dictations:changed': void
   'app:navigate': AppRoute
   'settings:navigate': SettingsTab
+  /** main -> every renderer, including the widget: the resolved theme. */
+  'app:theme': ResolvedTheme
+  /**
+   * Settings live in their own window, so anything else showing a setting —
+   * the shortcut hint on the dictation page — would otherwise go stale the
+   * moment it was rebound, with both windows visible at once.
+   */
+  'settings:changed': Settings
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */
