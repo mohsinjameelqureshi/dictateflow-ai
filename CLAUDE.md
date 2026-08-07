@@ -1,7 +1,7 @@
 # Wispr AI — Build Specification
 
-**Version** 2.0
-**Updated** 2026-08-05
+**Version** 2.1
+**Updated** 2026-08-07
 **Owner** Mohsin Jameel Qureshi
 **Status** Pre-Phase 1. Transcription pipeline validated. UI not started.
 
@@ -288,6 +288,54 @@ An accidental shortcut tap with no speech can produce phantom text like
 typed preload bridge. This app runs a global keyboard hook and holds an API
 key — these are not optional.
 
+### 6.8 The renderer cannot read recordings off disk directly
+
+`sandbox: true` plus `contextIsolation: true` means no `fs` in the renderer,
+and `file://` URLs in an `<audio>` element are blocked by the CSP. Do not
+weaken either to make playback work.
+
+Register a custom scheme and resolve the file **in the main process**, from a
+dictation id — never from a path supplied by the renderer.
+
+```ts
+// before app.whenReady()
+protocol.registerSchemesAsPrivileged([{
+  scheme: 'wispr-audio',
+  privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+}])
+
+// after ready
+protocol.handle('wispr-audio', async (req) => {
+  const id = Number(new URL(req.url).hostname)          // wispr-audio://123
+  const row = getDictation(id)                          // DB is the only source of truth
+  if (!row?.audioFile) return new Response(null, { status: 404 })
+
+  const abs = path.join(recordingsDir, path.basename(row.audioFile))
+  if (!abs.startsWith(recordingsDir)) return new Response(null, { status: 403 })
+
+  return net.fetch(pathToFileURL(abs).toString())
+})
+```
+
+`path.basename` plus the prefix check are both required. One of them alone is
+a path-traversal hole.
+
+Add `media-src 'self' wispr-audio:;` to the renderer CSP.
+
+**Store the exact bytes that were sent to the provider.** The reason to keep a
+recording is to hear what actually happened when a transcript is wrong.
+Re-encoding destroys the evidence. 16kHz mono WAV is ~1.9 MB per minute of
+speech — see §8 for retention.
+
+**Write the file before the DB row.** Name it with a UUID at capture time,
+insert the row referencing that filename, and sweep unreferenced files in
+`recordings/` on startup. The reverse order leaves rows pointing at nothing,
+which is worse than a stray file.
+
+Never keep audio for a session that produced no row — cancelled (Esc), too
+short, or below the amplitude floor (§6.6). Nothing in the UI would ever
+reach it.
+
 ---
 
 ## 7. Architecture
@@ -303,6 +351,9 @@ src/
 │   │   └── hook.ts           uiohook-napi, key up + down
 │   ├── insert/
 │   │   └── clipboard.ts      save → paste → restore
+│   ├── audio/
+│   │   ├── store.ts          write/delete/sweep recordings/
+│   │   └── protocol.ts       wispr-audio:// handler (§6.8)
 │   └── ipc/
 │       └── handlers.ts       typed channels only
 │
@@ -389,6 +440,10 @@ export const dictations = sqliteTable('dictations', {
   grammarFixes:    integer('grammar_fixes').notNull().default(0),
   dictionaryFixes: integer('dictionary_fixes').notNull().default(0),
   favorite:    integer('favorite', { mode: 'boolean' }).notNull().default(false),
+  // Audio. Filename only — never an absolute path. Null = no recording kept.
+  audioFile:   text('audio_file'),
+  audioBytes:  integer('audio_bytes'),
+  audioMime:   text('audio_mime'),
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (t) => ({
   createdIdx:  index('dictations_created_idx').on(t.createdAt),
@@ -428,8 +483,28 @@ export const dailyStats = sqliteTable('daily_stats', {
   field is needed.
 - Settings keys: `shortcut`, `microphoneId`, `theme`, `language`,
   `launchOnStartup`, `minimizeToTray`, `typingDelayMs`, `speechProvider`,
-  `enhanceEnabled`.
+  `enhanceEnabled`, `keepRecordings`, `recordingRetentionDays`.
 - **The API key does not go in this table.** `safeStorage` only.
+
+### Recording storage
+
+- Files live in `app.getPath('userData')/recordings/`, one WAV per session,
+  named with a UUID. The DB stores the filename; the directory is resolved at
+  runtime so a reinstall or a moved profile does not orphan everything.
+- The three audio columns are an **additive migration** on a table that
+  shipped in Phase 3. All nullable, no backfill. Rows recorded before this
+  phase show a disabled Play control, not a broken one.
+- Deleting a dictation deletes its file in the same operation. A row without
+  its audio is acceptable; a file without its row is a leak.
+- `keepRecordings` default **on**. `recordingRetentionDays` default **off**
+  (keep everything), with 7 / 30 / 90 as the other options. Favourites are
+  exempt from automatic deletion — favouriting is the user saying keep this.
+- Settings shows total recording size on disk and a one-click clear. At
+  ~1.9 MB per spoken minute this number gets large quietly, so show it rather
+  than letting the user discover it in Explorer.
+- **JSON export does not include audio.** Text export stays a text file. Offer
+  a separate "Export recordings" that writes a zip, and on import treat a
+  missing file as a missing recording, not an error.
 
 ### Metric definitions
 
@@ -454,7 +529,7 @@ Ambiguity here produces meaningless numbers. Fixed definitions:
 - Groq transcription
 - Personal dictionary (deterministic replacement)
 - Clipboard insertion
-- History with search, copy, delete, favorite
+- History with search, copy, delete, favorite, and play the original recording
 - Insights: total words, sessions, WPM, streaks, heatmap
 - Settings: shortcut, microphone, theme, startup, tray
 - System tray: Open / Settings / Quit
@@ -587,9 +662,43 @@ Daily aggregation, heatmap, streaks, WPM.
 ### Phase 5 — settings
 Shortcut capture, mic picker, theme, startup, tray, export/import.
 
-### Phase 6 — polish
+### Phase 6 — recordings and playback
+
+Keep the audio for every session and let the user hear it back from history.
+
+1. **Persist the clip.** On a successful dictation, write the exact WAV that
+   was sent to the provider into `recordings/` and record `audioFile`,
+   `audioBytes`, and `audioMime` on the row. File first, then row (§6.8).
+2. **Serve it.** Register the `wispr-audio://` scheme and its handler, and
+   widen the renderer CSP to `media-src`.
+3. **Play control.** Every session row in Dictation gets a Play button in the
+   same action group as copy, delete, and favorite. It sits first — it is the
+   only control that reveals something the row does not already show.
+4. **One player.** A single `<audio>` element owned by the Zustand store, not
+   one per row. Starting a second recording stops the first. Show elapsed and
+   total time, and let the row's Play toggle to Pause — the label matches the
+   result (§12).
+5. **Deletion and retention.** Deleting a session deletes its file. Apply
+   `recordingRetentionDays` on startup, skipping favourites. Sweep
+   unreferenced files in the same pass.
+6. **Degrade honestly.** No `audioFile`, or a file that is gone: the control
+   is disabled with "No recording", never a play button that fails silently.
+
+Keyboard: the control is a real button in the tab order, Space and Enter
+toggle it, and playback state is announced — a spinner-free `aria-pressed`
+is enough.
+
+**Gate:** a session recorded before an app restart still plays after it;
+deleting that session removes its file from disk; a row from Phase 3 with no
+audio renders a disabled control and no console error.
+
+### Phase 7 — polish
 Chunked streaming upload (§3), animations, error states, code signing,
 installer.
+
+Chunked upload streams the clip while the user is still speaking, so the
+recorder must still assemble and keep the complete WAV locally for §8. The
+chunks are a transport detail — they are not the artifact.
 
 ---
 
@@ -601,6 +710,7 @@ A feature is complete when:
 - Every failure path handled and surfaced in the UI
 - Keyboard accessible, visible focus states
 - Data persisted, migration written
+- Any file written to disk is deleted with the row that owns it
 - `contextIsolation` and `sandbox` intact
 - Works at 125% and 150% DPI scaling
 - Works with the taskbar on the left edge
@@ -612,8 +722,12 @@ A feature is complete when:
 ## 15. Open questions
 
 1. Does connection reuse actually recover 200–400ms? Measure in Phase 2.
-2. Does chunked upload deliver the expected win? Measure in Phase 6.
+2. Does chunked upload deliver the expected win? Measure in Phase 7.
 3. What is the real error rate on proper nouns after the dictionary is
    populated?
 4. Is 25MB ever a real constraint? A 16kHz mono WAV hits it around 13
    minutes of continuous speech.
+5. How much disk does a month of ordinary use actually consume? Measure in
+   Phase 6 and set the retention default from that number, not from a guess.
+   If it is large, revisit Opus for storage — but only with the measurement
+   in hand.

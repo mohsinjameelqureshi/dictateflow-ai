@@ -7,4 +7,9 @@ release/
 .vite/
 spikes/node_modules/
 
+# Benchmark fixtures are DERIVED from the two committed sources — see
+# bench/make-fixtures.mjs. Regenerate them; do not store the concatenations.
+bench/fixtures/*.wav
+!bench/fixtures/source-*.wav
+
 *.tsbuildinfo

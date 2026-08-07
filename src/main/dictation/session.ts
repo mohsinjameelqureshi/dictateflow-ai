@@ -13,6 +13,7 @@ import { SpeechError } from '../../services/speech/types.js'
 import {
   applyDictionary,
   buildVocabularyHint,
+  stripVocabularyHint,
   type DictionaryRule,
 } from '../../services/enhance/dictionary.js'
 import { broadcastDictationsChanged } from '../broadcast.js'
@@ -190,7 +191,16 @@ class DictationSession {
         ...(hint ? { vocabularyHint: hint } : {}),
         signal: this.#abort.signal,
       })
-      rawText = result.text
+      // §6.5 — the hint can come back inside the transcript. Cut it before
+      // anything else sees the text, including `rawText`: the leak is our
+      // sentence echoed back, not something the user said, so storing it as
+      // the "source of truth" would pollute their history and their search.
+      const cleaned = stripVocabularyHint(result.text, hint)
+      if (cleaned.stripped > 0) {
+        console.warn(`[speech] vocabulary hint leaked into the transcript (${cleaned.stripped} words); removed`)
+      }
+
+      rawText = cleaned.text
       providerId = result.providerId
     } catch (err) {
       this.#failed(err)

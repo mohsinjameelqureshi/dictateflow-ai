@@ -55,6 +55,11 @@ export class GroqSpeechProvider implements SpeechProvider {
           file: await toFile(audio, 'clip.wav', { type: 'audio/wav' }),
           model: MODEL,
           response_format: 'json',
+          // Pinned rather than left to the provider's default. The same clip
+          // should transcribe to the same words every time — otherwise the
+          // dictionary's hit counts, the §15 benchmarks and any "did that
+          // change help?" comparison are all measuring sampling noise.
+          temperature: 0,
           // Passing the language skips detection and is slightly faster.
           ...(opts.language ? { language: opts.language } : {}),
           ...(opts.vocabularyHint ? { prompt: opts.vocabularyHint } : {}),

@@ -38,9 +38,21 @@ export function getApiKey(): string | null {
   return memo
 }
 
+/**
+ * Groq issues keys with this prefix. Checking it turns a typo — a truncated
+ * paste, the wrong provider's key — into an error at the moment of entry,
+ * where the user is looking at the field, instead of a 401 on their first
+ * dictation with the widget saying the key was rejected.
+ */
+const KEY_PREFIX = 'gsk_'
+
 export function setApiKey(key: string): ApiKeyStatus {
   const trimmed = key.trim()
   if (!trimmed) return clearApiKey()
+
+  if (!trimmed.startsWith(KEY_PREFIX)) {
+    throw new Error(`A Groq key starts with "${KEY_PREFIX}". Check you copied the whole key.`)
+  }
 
   if (!safeStorage.isEncryptionAvailable()) {
     // Refuse rather than silently writing plaintext. §2 chose safeStorage
