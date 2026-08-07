@@ -44,14 +44,16 @@ export function InsightsPage() {
     <Page title="Insights" description="Derived from your local history.">
       {error && <p className="mb-4 text-sm text-danger">{error}</p>}
 
+      {/* Rate first, then the totals it is derived from, then the streak —
+          which measures habit rather than volume and belongs at the end. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat value={data?.wpm ?? 0} label="Words per minute" hint="over recording time" />
         <Stat value={(data?.totalWords ?? 0).toLocaleString()} label="Words" />
         <Stat
           value={(data?.totalSessions ?? 0).toLocaleString()}
           label="Sessions"
           hint={data ? formatDuration(data.totalDurationMs) + ' recorded' : undefined}
         />
-        <Stat value={data?.wpm ?? 0} label="Words per minute" hint="over recording time" />
         <Stat
           value={data?.currentStreak ?? 0}
           label="Day streak"

@@ -321,7 +321,7 @@ export interface IpcMap {
  * Destinations in the main window. Settings is deliberately absent: it is a
  * separate window now, not a page here.
  */
-export type AppRoute = 'history' | 'insights' | 'dictionary'
+export type AppRoute = 'history' | 'insights' | 'dictionary' | 'transform'
 
 /** Channel -> payload for main-initiated pushes. See IPC_EVENT. */
 export interface IpcEventMap {

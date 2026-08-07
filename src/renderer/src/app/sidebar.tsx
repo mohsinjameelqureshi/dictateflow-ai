@@ -3,6 +3,7 @@ import {
   BookMarked,
   Mic,
   Settings,
+  WandSparkles,
   type LucideIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -20,8 +21,11 @@ const ITEMS: Item[] = [
   // The route id stays `history` — it is an internal key, and renaming it
   // would churn the shared AppRoute type and the preload bridge for a label.
   { id: "history", label: "Dictation", icon: Mic },
-  { id: "dictionary", label: "Dictionary", icon: BookMarked },
   { id: "insights", label: "Insights", icon: BarChart3 },
+  // Dictionary and Transform are both "rules applied to a transcript", so they
+  // sit together below the two destinations that show what was dictated.
+  { id: "dictionary", label: "Dictionary", icon: BookMarked },
+  { id: "transform", label: "Transform", icon: WandSparkles },
 ];
 
 /**
@@ -82,10 +86,12 @@ export function Sidebar({
   route,
   collapsed,
   onNavigate,
+  onToggle,
 }: {
   route: AppRoute;
   collapsed: boolean;
   onNavigate: (r: AppRoute) => void;
+  onToggle: () => void;
 }) {
   return (
     <nav
@@ -93,7 +99,7 @@ export function Sidebar({
       id="app-sidebar"
       aria-label="Main"
       className={cn(
-        "flex shrink-0 flex-col gap-1 overflow-hidden border-r border-line bg-surface p-3",
+        "relative flex shrink-0 flex-col gap-1 overflow-hidden border-r border-line bg-surface p-3",
         "transition-[width] duration-200 ease-out",
         collapsed ? "w-[68px] items-center" : "w-52",
       )}
@@ -142,6 +148,32 @@ export function Sidebar({
           onClick={() => void window.wispr.settings.open()}
         />
       </div>
+
+      {/* The divider doubles as a toggle, so the edge you already read as the
+          sidebar's boundary is also the thing that moves it.
+
+          The strip is 8px of hit area over a 1px line — a hairline is a target
+          you have to aim at. It sits inside the nav's own padding, so it never
+          overlaps a nav button.
+
+          Pointer-only on purpose: `tabIndex={-1}` and `aria-hidden` keep it out
+          of the tab order and the accessibility tree, because it does exactly
+          what the title bar's toggle does and a second identical control is
+          noise to anyone navigating by keyboard or screen reader. */}
+      <button
+        type="button"
+        onClick={onToggle}
+        tabIndex={-1}
+        aria-hidden
+        className="group absolute inset-y-0 right-0 z-10 w-2 cursor-pointer"
+      >
+        <span
+          className={cn(
+            "absolute inset-y-0 right-0 w-0.5 transition-colors duration-150",
+            "group-hover:bg-accent group-active:bg-accent-hover",
+          )}
+        />
+      </button>
     </nav>
   );
 }
