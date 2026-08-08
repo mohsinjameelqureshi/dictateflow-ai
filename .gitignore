@@ -7,9 +7,22 @@ release/
 .vite/
 spikes/node_modules/
 
-# Benchmark fixtures are DERIVED from the two committed sources — see
-# bench/make-fixtures.mjs. Regenerate them; do not store the concatenations.
+# drizzle-kit writes this while generating a migration. It is a throwaway
+# scratch database, never the user's real one — see drizzle.config.ts.
+.drizzle-scratch.db
+
+# Per-machine Claude Code permissions. The `.local` suffix is the convention
+# for "yours, not the repo's". The skills/ directory beside it is shared and
+# is meant to be committed.
+.claude/settings.local.json
+
+# No audio in this repo, ever. `source-*.wav` are recordings of a real human
+# voice, and the rest are derived from them — see bench/make-fixtures.mjs.
+# Supply your own two sources locally; they are yours and they stay local.
 bench/fixtures/*.wav
-!bench/fixtures/source-*.wav
+
+# Internal working plan for the open source release. Kept on disk, not
+# published — visitors want README and CLAUDE.md, not a personal checklist.
+OPEN-SOURCE-PLAN.md
 
 *.tsbuildinfo

@@ -5,13 +5,22 @@ import { fileURLToPath } from 'node:url'
 /**
  * Builds the benchmark fixtures from two real recordings.
  *
- * The sources are the actual Phase 0 spike captures — real speech at 16kHz
- * mono 16-bit, byte-identical to what the app records, so the measurement
- * reflects the real pipeline rather than a synthetic tone.
+ * The sources must be real speech, not a synthetic tone — Whisper's timing
+ * depends on what it is decoding, and a sine wave measures nothing useful.
+ * They must also be 16kHz mono 16-bit, byte-identical in format to what the
+ * app records, so the number reflects the real pipeline.
  *
- * Only the two sources are committed. The fixtures are DERIVED and generated
- * on demand: keeping ~2.5MB of concatenations in git buys nothing when the
- * concatenation is deterministic.
+ * NOTHING IN bench/fixtures/ IS COMMITTED, and that is deliberate: a recording
+ * of someone's voice is personal data, and this repo is public. Supply your
+ * own. The easiest way is to dictate twice in the app and copy the WAVs out of
+ * `%APPDATA%\typeflow-ai\recordings\`:
+ *
+ *   bench/fixtures/source-a.wav   ~8s of speech
+ *   bench/fixtures/source-b.wav   ~11s of speech
+ *
+ * Then the derived fixtures (short/medium/long) are generated on demand —
+ * keeping ~2.5MB of deterministic concatenations in git would buy nothing
+ * even if the audio were shareable.
  *
  *   node bench/make-fixtures.mjs
  */
@@ -22,7 +31,22 @@ const RATE = 16000
 const BYTES_PER_SAMPLE = 2
 
 function readPcm(name) {
-  const buf = readFileSync(join(HERE, name))
+  let buf
+  try {
+    buf = readFileSync(join(HERE, name))
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err
+    // The sources are intentionally not in the repo. Say so here rather than
+    // letting a bare ENOENT imply the checkout is broken.
+    throw new Error(
+      `bench/fixtures/${name} is missing.\n\n` +
+        'Benchmark sources are not committed — they are recordings of a real\n' +
+        'voice and this repo is public. Supply your own two clips as\n' +
+        'bench/fixtures/source-a.wav (~8s) and source-b.wav (~11s),\n' +
+        '16kHz mono 16-bit. Dictating twice in the app and copying the WAVs\n' +
+        'out of %APPDATA%\\typeflow-ai\\recordings\\ is the quickest way.',
+    )
+  }
   if (buf.length < 44 || buf.toString('ascii', 0, 4) !== 'RIFF') {
     throw new Error(`${name} is not a WAV file`)
   }

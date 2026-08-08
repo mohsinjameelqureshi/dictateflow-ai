@@ -36,6 +36,12 @@ ones worth measuring.
 `bench/fixtures/`. Never benchmark against live speech — the input has to be
 byte-identical across runs or the comparison is meaningless.
 
+`bench/fixtures/` is gitignored in full. The sources are recordings of a real
+voice and this repo is public, so they are never committed. Supply two clips
+of your own as `source-a.wav` (~8s) and `source-b.wav` (~11s), 16kHz mono
+16-bit, then `node bench/make-fixtures.mjs` derives the rest. Running it
+without them prints instructions rather than a stack trace.
+
 **Segment the timing.** A single total is not actionable. Record separately:
 
 ```ts
