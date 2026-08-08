@@ -9,13 +9,13 @@ directories:
 files:
   - out/**
   - package.json
-  - '!**/*.map'
+  - "!**/*.map"
   # Migrations are read at startup by drizzle's migrator. They must be in the
   # package, not just the repo. Readable from inside the asar.
   - src/db/migrations/**
 asarUnpack:
   # Native .node binaries cannot be loaded from inside an asar archive.
-  - '**/*.node'
+  - "**/*.node"
   - node_modules/better-sqlite3/**
 extraResources:
   # The tray and the window icons load this at runtime by path. buildResources
@@ -44,3 +44,4 @@ nsis:
   # the cost of it ever flipping is the user's entire dictation history and
   # every recording deleted by an uninstall they expected to be reversible.
   deleteAppDataOnUninstall: false
+  runAfterFinish: true
