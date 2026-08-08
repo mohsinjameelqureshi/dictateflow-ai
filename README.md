@@ -1,11 +1,13 @@
 # TypeFlow AI
 
-**Local-first desktop dictation for Windows.** Hold `Ctrl` + `Win`, speak,
-release. The text appears in whatever application had focus — your editor, a
-browser field, Slack, anything.
+**Local-first desktop dictation for Windows.** Hold `Ctrl` + `Win` (the
+default — rebind it to anything), speak, release. The text appears in whatever
+application had focus — your editor, a browser field, Slack, anything.
 
 No account. No login. No cloud database. Your dictation history, statistics
 and recordings live in a SQLite file on your machine and never leave it.
+
+![The Dictation view — every session you have dictated, stored locally](docs/screenshots/dictation.png)
 
 > **Status:** v0.1.0, Windows x64 only. Built by one person for their own
 > daily use, then opened up. It works, it is not polished for scale, and there
@@ -75,7 +77,7 @@ it to your Windows user account.
 
 | Action                    | How                                            |
 | ------------------------- | ---------------------------------------------- |
-| Dictate                   | Hold `Ctrl` + `Win`, speak, release             |
+| Dictate                   | Hold your shortcut, speak, release              |
 | Cancel mid-sentence       | `Esc` while recording                           |
 | Change the shortcut       | Settings → General                              |
 | Review or replay history  | Dictation tab — every session, with its audio   |
@@ -84,12 +86,30 @@ it to your Windows user account.
 The floating widget appears on whichever monitor your cursor is on, and never
 takes focus — that is what makes inserting into the app behind it possible.
 
+The shortcut is yours to pick — hold, don't tap. One key plus modifiers, or a
+function key on its own.
+
+![Settings — shortcut, microphone and theme](docs/screenshots/settings.png)
+
+### Insights
+
+Words per minute, total words, sessions and streaks, all derived from your
+local history. Nothing is uploaded to produce these — they are queries against
+your own database.
+
+![Insights — words per minute, totals, streaks and a year-long activity heatmap](docs/screenshots/insights.png)
+
 ### Personal dictionary
 
 Whisper reliably mangles proper nouns. The dictionary is a plain list of
 find-and-replace rules applied after transcription, so `grog` → `Groq` once
 and it stays fixed. Entries also seed Whisper's vocabulary hint, which
 prevents some errors instead of correcting them.
+
+Matching ignores case and only ever replaces whole words, so a rule for `cat`
+leaves `concatenate` alone.
+
+![Dictionary — find-and-replace rules for words the transcriber keeps getting wrong](docs/screenshots/dictionary.png)
 
 ---
 
