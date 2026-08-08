@@ -23,7 +23,7 @@ multi-user features, authentication, or account systems.
 
 ### Naming
 
-The upstream product is made by a company named *Wispr AI, Inc.* Before any
+The upstream product is made by a company named _Wispr AI, Inc._ Before any
 public release, rename this project. Internal codename is fine for now.
 Not legal advice — but do not publish under this name.
 
@@ -33,14 +33,14 @@ Not legal advice — but do not publish under this name.
 
 Do not revisit these without new evidence.
 
-| Question | Decision | Reason |
-|---|---|---|
-| Desktop framework | **Electron** | Gives React + shadcn. Wispr Flow itself is Electron-class. |
-| Speech-to-text | **Groq, `whisper-large-v3-turbo`** | Free tier, no card, fastest free option |
-| Grammar cleanup | **Off by default** | Deletes words. See §4. |
-| Authentication | **None** | One user, one local DB file. Nothing to authenticate. |
-| API key storage | **Electron `safeStorage`** | OS-level encryption via Windows Credential Manager |
-| Cloud database | **None** | SQLite local only |
+| Question          | Decision                           | Reason                                                     |
+| ----------------- | ---------------------------------- | ---------------------------------------------------------- |
+| Desktop framework | **Electron**                       | Gives React + shadcn. Wispr Flow itself is Electron-class. |
+| Speech-to-text    | **Groq, `whisper-large-v3-turbo`** | Free tier, no card, fastest free option                    |
+| Grammar cleanup   | **Off by default**                 | Deletes words. See §4.                                     |
+| Authentication    | **None**                           | One user, one local DB file. Nothing to authenticate.      |
+| API key storage   | **Electron `safeStorage`**         | OS-level encryption via Windows Credential Manager         |
+| Cloud database    | **None**                           | SQLite local only                                          |
 
 ### Why no auth
 
@@ -131,11 +131,13 @@ draft plus quick manual fix is the product.
 ## 5. Tech stack
 
 ### Desktop
+
 - Electron (latest stable)
 - electron-vite (build tooling)
 - electron-builder (packaging)
 
 ### Renderer
+
 - React 18 + TypeScript (strict)
 - Tailwind CSS
 - shadcn/ui
@@ -145,6 +147,7 @@ draft plus quick manual fix is the product.
 - React Hook Form + Zod (settings forms)
 
 ### Main process
+
 - better-sqlite3 + Drizzle ORM
 - **`uiohook-napi`** — global keyboard hook. **NOT Electron `globalShortcut`.**
 - **`nut.js`** — keyboard simulation. **NOT robotjs** (unmaintained).
@@ -177,25 +180,28 @@ combinations are not supported. Hold-to-record is impossible with it.
 Use `uiohook-napi`, which exposes both `keydown` and `keyup`.
 
 ```ts
-import { uIOhook, UiohookKey } from 'uiohook-napi'
+import { uIOhook, UiohookKey } from "uiohook-napi";
 
-let held = false
+let held = false;
 
-uIOhook.on('keydown', (e) => {
+uIOhook.on("keydown", (e) => {
   if (e.keycode === UiohookKey.Ctrl && e.metaKey && !held) {
-    held = true
-    startDictation()
+    held = true;
+    startDictation();
   }
-})
+});
 
-uIOhook.on('keyup', (e) => {
-  if (held && (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.Meta)) {
-    held = false
-    stopDictation()
+uIOhook.on("keyup", (e) => {
+  if (
+    held &&
+    (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.Meta)
+  ) {
+    held = false;
+    stopDictation();
   }
-})
+});
 
-uIOhook.start()
+uIOhook.start();
 ```
 
 Guard against auto-repeat with the `held` flag — key-down fires continuously
@@ -210,7 +216,7 @@ widget, and inserted text goes nowhere.
 new BrowserWindow({
   frame: false,
   transparent: true,
-  focusable: false,        // ← non-negotiable
+  focusable: false, // ← non-negotiable
   skipTaskbar: true,
   alwaysOnTop: true,
   resizable: false,
@@ -218,10 +224,10 @@ new BrowserWindow({
     contextIsolation: true,
     nodeIntegration: false,
     sandbox: true,
-    preload: path.join(__dirname, 'preload.js'),
+    preload: path.join(__dirname, "preload.js"),
   },
-})
-win.setAlwaysOnTop(true, 'screen-saver')
+});
+win.setAlwaysOnTop(true, "screen-saver");
 ```
 
 Capture the target window handle **before** showing the widget.
@@ -232,11 +238,11 @@ The original spec said "80px above the taskbar." This breaks with DPI scaling,
 side or top taskbars, auto-hide, and mixed-scale multi-monitor setups.
 
 ```ts
-const point = screen.getCursorScreenPoint()
-const { workArea } = screen.getDisplayNearestPoint(point)
+const point = screen.getCursorScreenPoint();
+const { workArea } = screen.getDisplayNearestPoint(point);
 
-const x = workArea.x + Math.round((workArea.width - WIDGET_W) / 2)
-const y = workArea.y + workArea.height - WIDGET_H - 24
+const x = workArea.x + Math.round((workArea.width - WIDGET_W) / 2);
+const y = workArea.y + workArea.height - WIDGET_H - 24;
 ```
 
 `workArea` already excludes the taskbar wherever it lives.
@@ -247,11 +253,11 @@ Character-by-character typing is visibly slow on long text and mangles
 non-ASCII and emoji.
 
 ```ts
-const previous = clipboard.readText()
-clipboard.writeText(finalText)
-await keyboard.pressKey(Key.LeftControl, Key.V)
-await keyboard.releaseKey(Key.LeftControl, Key.V)
-setTimeout(() => clipboard.writeText(previous), 150)
+const previous = clipboard.readText();
+clipboard.writeText(finalText);
+await keyboard.pressKey(Key.LeftControl, Key.V);
+await keyboard.releaseKey(Key.LeftControl, Key.V);
+setTimeout(() => clipboard.writeText(previous), 150);
 ```
 
 Restore the user's clipboard. Losing it is a real annoyance.
@@ -268,7 +274,7 @@ Electron..."` was transcribed verbatim into the output as `"Terms & Tm."`
 Phrase it as natural speech:
 
 ```ts
-prompt: "I'm dictating notes about TypeScript, Electron, SQLite, and React."
+prompt: "I'm dictating notes about TypeScript, Electron, SQLite, and React.";
 ```
 
 Build this string from the user's dictionary entries at runtime. It prevents
@@ -299,22 +305,30 @@ dictation id — never from a path supplied by the renderer.
 
 ```ts
 // before app.whenReady()
-protocol.registerSchemesAsPrivileged([{
-  scheme: 'wispr-audio',
-  privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
-}])
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "wispr-audio",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+]);
 
 // after ready
-protocol.handle('wispr-audio', async (req) => {
-  const id = Number(new URL(req.url).hostname)          // wispr-audio://123
-  const row = getDictation(id)                          // DB is the only source of truth
-  if (!row?.audioFile) return new Response(null, { status: 404 })
+protocol.handle("wispr-audio", async (req) => {
+  const id = Number(new URL(req.url).hostname); // wispr-audio://123
+  const row = getDictation(id); // DB is the only source of truth
+  if (!row?.audioFile) return new Response(null, { status: 404 });
 
-  const abs = path.join(recordingsDir, path.basename(row.audioFile))
-  if (!abs.startsWith(recordingsDir)) return new Response(null, { status: 403 })
+  const abs = path.join(recordingsDir, path.basename(row.audioFile));
+  if (!abs.startsWith(recordingsDir))
+    return new Response(null, { status: 403 });
 
-  return net.fetch(pathToFileURL(abs).toString())
-})
+  return net.fetch(pathToFileURL(abs).toString());
+});
 ```
 
 `path.basename` plus the prefix check are both required. One of them alone is
@@ -399,22 +413,22 @@ exist. Make swapping a one-line change.
 ```ts
 // services/speech/types.ts
 export interface SpeechProvider {
-  readonly id: string
-  readonly label: string
-  readonly requiresNetwork: boolean
-  transcribe(audio: Buffer, opts: TranscribeOptions): Promise<TranscribeResult>
+  readonly id: string;
+  readonly label: string;
+  readonly requiresNetwork: boolean;
+  transcribe(audio: Buffer, opts: TranscribeOptions): Promise<TranscribeResult>;
 }
 
 export interface TranscribeOptions {
-  language?: string
-  vocabularyHint?: string
-  signal?: AbortSignal      // for user cancellation
+  language?: string;
+  vocabularyHint?: string;
+  signal?: AbortSignal; // for user cancellation
 }
 
 export interface TranscribeResult {
-  text: string
-  durationMs: number
-  providerId: string
+  text: string;
+  durationMs: number;
+  providerId: string;
 }
 ```
 
@@ -428,50 +442,54 @@ and saves a rewrite later.
 Corrected — the original had missing columns and no key structure.
 
 ```ts
-export const dictations = sqliteTable('dictations', {
-  id:          integer('id').primaryKey({ autoIncrement: true }),
-  rawText:     text('raw_text').notNull(),
-  finalText:   text('final_text').notNull(),
-  durationMs:  integer('duration_ms').notNull(),
-  words:       integer('words').notNull(),
-  language:    text('language').notNull().default('en'),
-  providerId:  text('provider_id').notNull(),
-  enhanced:    integer('enhanced', { mode: 'boolean' }).notNull().default(false),
-  grammarFixes:    integer('grammar_fixes').notNull().default(0),
-  dictionaryFixes: integer('dictionary_fixes').notNull().default(0),
-  favorite:    integer('favorite', { mode: 'boolean' }).notNull().default(false),
-  // Audio. Filename only — never an absolute path. Null = no recording kept.
-  audioFile:   text('audio_file'),
-  audioBytes:  integer('audio_bytes'),
-  audioMime:   text('audio_mime'),
-  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
-}, (t) => ({
-  createdIdx:  index('dictations_created_idx').on(t.createdAt),
-  favoriteIdx: index('dictations_favorite_idx').on(t.favorite),
-}))
+export const dictations = sqliteTable(
+  "dictations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    rawText: text("raw_text").notNull(),
+    finalText: text("final_text").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    words: integer("words").notNull(),
+    language: text("language").notNull().default("en"),
+    providerId: text("provider_id").notNull(),
+    enhanced: integer("enhanced", { mode: "boolean" }).notNull().default(false),
+    grammarFixes: integer("grammar_fixes").notNull().default(0),
+    dictionaryFixes: integer("dictionary_fixes").notNull().default(0),
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
+    // Audio. Filename only — never an absolute path. Null = no recording kept.
+    audioFile: text("audio_file"),
+    audioBytes: integer("audio_bytes"),
+    audioMime: text("audio_mime"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  (t) => ({
+    createdIdx: index("dictations_created_idx").on(t.createdAt),
+    favoriteIdx: index("dictations_favorite_idx").on(t.favorite),
+  }),
+);
 
 // Key-value. The original had bare columns with no primary key.
-export const settings = sqliteTable('settings', {
-  key:   text('key').primaryKey(),
-  value: text('value').notNull(),
-})
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
 
 // Personal dictionary. Must exist in v1 — see §9.
-export const dictionary = sqliteTable('dictionary', {
-  id:        integer('id').primaryKey({ autoIncrement: true }),
-  from:      text('from_text').notNull().unique(),
-  to:        text('to_text').notNull(),
-  hitCount:  integer('hit_count').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-})
+export const dictionary = sqliteTable("dictionary", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  from: text("from_text").notNull().unique(),
+  to: text("to_text").notNull(),
+  hitCount: integer("hit_count").notNull().default(0),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
 
 // Pre-aggregated per-day, for the heatmap.
-export const dailyStats = sqliteTable('daily_stats', {
-  day:         text('day').primaryKey(),   // 'YYYY-MM-DD' local time
-  words:       integer('words').notNull().default(0),
-  sessions:    integer('sessions').notNull().default(0),
-  durationMs:  integer('duration_ms').notNull().default(0),
-})
+export const dailyStats = sqliteTable("daily_stats", {
+  day: text("day").primaryKey(), // 'YYYY-MM-DD' local time
+  words: integer("words").notNull().default(0),
+  sessions: integer("sessions").notNull().default(0),
+  durationMs: integer("duration_ms").notNull().default(0),
+});
 ```
 
 ### Notes
@@ -563,19 +581,23 @@ failure case.
 
 ```ts
 const norm = (s: string) =>
-  s.toLowerCase().replace(/[^\w\s']/g, '').split(/\s+/).filter(Boolean)
+  s
+    .toLowerCase()
+    .replace(/[^\w\s']/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
 
 export function droppedWords(raw: string, clean: string): string[] {
-  const after = new Map<string, number>()
-  for (const w of norm(clean)) after.set(w, (after.get(w) ?? 0) + 1)
+  const after = new Map<string, number>();
+  for (const w of norm(clean)) after.set(w, (after.get(w) ?? 0) + 1);
 
-  const lost: string[] = []
+  const lost: string[] = [];
   for (const w of norm(raw)) {
-    const n = after.get(w) ?? 0
-    if (n === 0) lost.push(w)
-    else after.set(w, n - 1)
+    const n = after.get(w) ?? 0;
+    if (n === 0) lost.push(w);
+    else after.set(w, n - 1);
   }
-  return lost
+  return lost;
 }
 ```
 
@@ -587,17 +609,17 @@ If this returns anything, log it and consider falling back to `rawText`.
 
 The original spec covered only the happy path. All states below are required.
 
-| State | Shown | Notes |
-|---|---|---|
-| Listening | mic + live waveform | Appears **immediately** on key-down, before the mic is ready |
-| Processing | spinner, "Transcribing…" | Visible on every use — make it good |
-| Inserting | brief pulse | Usually <100ms |
-| Success | check, "Inserted" | Auto-dismiss ~800ms |
-| **No speech** | "Didn't catch that" | Clip too short or too quiet |
-| **Offline** | "No connection" | Network dependency is real |
-| **Rate limited** | "Rate limited — try again" | HTTP 429 |
-| **Blocked** | "Can't type into this window" | Elevated-window UIPI failure |
-| **Cancelled** | fade, no text | Esc during recording |
+| State            | Shown                         | Notes                                                        |
+| ---------------- | ----------------------------- | ------------------------------------------------------------ |
+| Listening        | mic + live waveform           | Appears **immediately** on key-down, before the mic is ready |
+| Processing       | spinner, "Transcribing…"      | Visible on every use — make it good                          |
+| Inserting        | brief pulse                   | Usually <100ms                                               |
+| Success          | check, "Inserted"             | Auto-dismiss ~800ms                                          |
+| **No speech**    | "Didn't catch that"           | Clip too short or too quiet                                  |
+| **Offline**      | "No connection"               | Network dependency is real                                   |
+| **Rate limited** | "Rate limited — try again"    | HTTP 429                                                     |
+| **Blocked**      | "Can't type into this window" | Elevated-window UIPI failure                                 |
+| **Cancelled**    | fade, no text                 | Esc during recording                                         |
 
 **Esc must cancel at any point.** The app is about to type into the user's
 IDE — an abort path is essential, not a nicety.
@@ -645,21 +667,26 @@ Standalone scripts, no Electron, no React.
 already proven.
 
 ### Phase 1 — shell
+
 electron-vite, React, Tailwind, shadcn, SQLite, Drizzle, migrations,
 `electron-rebuild` wired into postinstall.
 
 ### Phase 2 — capture loop
+
 Widget window, hook, recorder, Groq call, clipboard insert, tray.
 **Gate:** end-to-end dictation works into Notepad and Chrome.
 
 ### Phase 3 — persistence
+
 Schema, history page, search, copy, delete, favorite, dictionary CRUD +
 replacement.
 
 ### Phase 4 — insights
+
 Daily aggregation, heatmap, streaks, WPM.
 
 ### Phase 5 — settings
+
 Shortcut capture, mic picker, theme, startup, tray, export/import.
 
 ### Phase 6 — recordings and playback
@@ -693,8 +720,8 @@ deleting that session removes its file from disk; a row from Phase 3 with no
 audio renders a disabled control and no console error.
 
 ### Phase 7 — polish
-Chunked streaming upload (§3), animations, error states, code signing,
-installer.
+
+code signing,installer.
 
 Chunked upload streams the clip while the user is still speaking, so the
 recorder must still assemble and keep the complete WAV locally for §8. The
