@@ -121,7 +121,7 @@ Requires Node 20+ and the Windows build tools that native modules need
 (Visual Studio Build Tools with the C++ workload).
 
 ```bash
-git clone <this repo>
+git clone https://github.com/mohsinjameelqureshi/typeflow-ai.git
 cd typeflow-ai
 npm install          # postinstall runs electron-rebuild — do not skip it
 npm run dev          # development, with hot reload
