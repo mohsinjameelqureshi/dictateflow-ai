@@ -1,6 +1,6 @@
 {
   "name": "typeflow-ai",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Local-first desktop dictation for Windows",
   "main": "./out/main/index.js",
   "author": "Mohsin Jameel Qureshi",

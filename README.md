@@ -9,7 +9,7 @@ and recordings live in a SQLite file on your machine and never leave it.
 
 ![The Dictation view — every session you have dictated, stored locally](docs/screenshots/dictation.png)
 
-> **Status:** v0.1.0, Windows x64 only. Built by one person for their own
+> **Status:** v1.0.0, Windows x64 only. Built by one person for their own
 > daily use, then opened up. It works, it is not polished for scale, and there
 > is no support commitment.
 
@@ -34,14 +34,14 @@ There is no telemetry, no analytics, and no crash reporting.
 
 ## Install
 
-Download the latest `TypeFlow AI-<version>-setup.exe` from the
+Download `typeflow-ai.exe` from the
 [Releases](../../releases) page and run it. It installs per-user and does not
 ask for administrator rights.
 
 ### Windows will warn you, and it is right to
 
 The installer is **not code signed** — a certificate costs a few hundred
-dollars a year, which is not justified for v0.1.0 of a personal project. So
+dollars a year, which is not justified for a personal project. So
 Windows SmartScreen shows:
 
 > **Windows protected your PC**
@@ -145,7 +145,7 @@ git clone https://github.com/mohsinjameelqureshi/typeflow-ai.git
 cd typeflow-ai
 npm install          # postinstall runs electron-rebuild — do not skip it
 npm run dev          # development, with hot reload
-npm run dist         # produces release/TypeFlow AI-<version>-setup.exe
+npm run dist         # produces release/typeflow-ai.exe
 ```
 
 `better-sqlite3` and `uiohook-napi` are native modules and must be compiled

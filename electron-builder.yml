@@ -1,8 +1,14 @@
 appId: com.mjq.typeflow-ai
 productName: TypeFlow AI
-# ${productName} contains a space, so the installer is named with it. Keep the
-# extension last — electron-builder matches the target off it.
-artifactName: ${productName}-${version}-setup.${ext}
+# A fixed, lowercase, space-free filename. productName ("TypeFlow AI") is what
+# users see in the Start menu and the window title; this is only what the
+# downloaded file is called, and a name with no spaces survives being passed
+# around shells, URLs and scripts intact.
+#
+# Deliberately carries no version: the GitHub release tag identifies it. The
+# cost is that two downloads collide in a Downloads folder — switch to
+# typeflow-ai-${version}.${ext} if that ever bites.
+artifactName: typeflow-ai.${ext}
 directories:
   buildResources: build
   output: release
