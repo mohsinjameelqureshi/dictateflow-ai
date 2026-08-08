@@ -1,13 +1,13 @@
 # TypeFlow AI
 
 **Local-first desktop dictation for Windows.** Hold `Ctrl` + `Win` (the
-default — rebind it to anything), speak, release. The text appears in whatever
-application had focus — your editor, a browser field, Slack, anything.
+default, rebindable to anything), speak, release. The text appears in whatever
+application had focus: your editor, a browser field, Slack, anything.
 
 No account. No login. No cloud database. Your dictation history, statistics
 and recordings live in a SQLite file on your machine and never leave it.
 
-![The Dictation view — every session you have dictated, stored locally](docs/screenshots/dictation.png)
+![The Dictation view: every session you have dictated, stored locally](docs/screenshots/dictation.png)
 
 > **Status:** v1.0.0, Windows x64 only. Built by one person for their own
 > daily use, then opened up. It works, it is not polished for scale, and there
@@ -22,10 +22,10 @@ transcribed by Whisper. That is the entire network surface.
 
 What never leaves:
 
-- your transcripts and history — SQLite, `%APPDATA%\typeflow-ai`
-- your recordings — WAV files in the same folder
+- your transcripts and history: SQLite, `%APPDATA%\typeflow-ai`
+- your recordings: WAV files in the same folder
 - your settings and personal dictionary
-- your Groq API key — encrypted at rest with Windows DPAPI via Electron's
+- your Groq API key, encrypted at rest with Windows DPAPI via Electron's
   `safeStorage`, keyed to your Windows account, stored outside the database
 
 There is no telemetry, no analytics, and no crash reporting.
@@ -40,14 +40,14 @@ ask for administrator rights.
 
 ### Windows will warn you, and it is right to
 
-The installer is **not code signed** — a certificate costs a few hundred
+The installer is **not code signed**. A certificate costs a few hundred
 dollars a year, which is not justified for a personal project. So
 Windows SmartScreen shows:
 
 > **Windows protected your PC**
 > Microsoft Defender SmartScreen prevented an unrecognised app from starting.
 
-Click **More info** → **Run anyway**.
+Click **More info**, then **Run anyway**.
 
 This warning means "nobody has paid to vouch for this file", not "this file is
 known to be malicious". If you would rather not take that on faith, every
@@ -60,9 +60,9 @@ minutes.
 ## Setup
 
 You need a free Groq API key. There is no bundled key and no server in front
-of the API — you talk to Groq directly with your own credentials.
+of the API. You talk to Groq directly with your own credentials.
 
-1. Sign up at [console.groq.com](https://console.groq.com) — free tier, no
+1. Sign up at [console.groq.com](https://console.groq.com). Free tier, no
    card required.
 2. Create an API key. It starts with `gsk_`.
 3. In TypeFlow AI, open **Settings → Transcription** and paste it.
@@ -80,24 +80,24 @@ it to your Windows user account.
 | Dictate                   | Hold your shortcut, speak, release              |
 | Cancel mid-sentence       | `Esc` while recording                           |
 | Change the shortcut       | Settings → General                              |
-| Review or replay history  | Dictation tab — every session, with its audio   |
-| Fix recurring misspellings| Dictionary tab — deterministic replacements     |
+| Review or replay history  | Dictation tab, with audio for every session     |
+| Fix recurring misspellings| Dictionary tab, deterministic replacements      |
 
 The floating widget appears on whichever monitor your cursor is on, and never
-takes focus — that is what makes inserting into the app behind it possible.
+takes focus. That is what makes inserting into the app behind it possible.
 
-The shortcut is yours to pick — hold, don't tap. One key plus modifiers, or a
-function key on its own.
+The shortcut is yours to pick. Hold it, don't tap it. One key plus modifiers,
+or a function key on its own.
 
-![Settings — shortcut, microphone and theme](docs/screenshots/settings.png)
+![Settings: shortcut, microphone and theme](docs/screenshots/settings.png)
 
 ### Insights
 
 Words per minute, total words, sessions and streaks, all derived from your
-local history. Nothing is uploaded to produce these — they are queries against
+local history. Nothing is uploaded to produce these. They are queries against
 your own database.
 
-![Insights — words per minute, totals, streaks and a year-long activity heatmap](docs/screenshots/insights.png)
+![Insights: words per minute, totals, streaks and a year-long activity heatmap](docs/screenshots/insights.png)
 
 ### Personal dictionary
 
@@ -109,7 +109,7 @@ prevents some errors instead of correcting them.
 Matching ignores case and only ever replaces whole words, so a rule for `cat`
 leaves `concatenate` alone.
 
-![Dictionary — find-and-replace rules for words the transcriber keeps getting wrong](docs/screenshots/dictionary.png)
+![Dictionary: find-and-replace rules for words the transcriber keeps getting wrong](docs/screenshots/dictionary.png)
 
 ---
 
@@ -118,14 +118,14 @@ leaves `concatenate` alone.
 These are real and documented rather than hidden:
 
 - **It cannot type into elevated windows.** A non-elevated process cannot send
-  input to a process running as administrator — this is Windows UIPI, not a
+  input to a process running as administrator. This is Windows UIPI, not a
   bug. Dictating into an admin terminal shows "Can't type into this window"
   rather than pretending it worked.
-- **It needs a network connection.** Expect 1–2 seconds between releasing the
-  key and text appearing. Roughly 95% of that is network round-trip and
+- **It needs a network connection.** Expect 1 to 2 seconds between releasing
+  the key and text appearing. Roughly 95% of that is network round-trip and
   free-tier queueing, not transcription.
 - **Grammar cleanup is off by default.** An LLM pass over Whisper's output
-  measurably deletes words — it has to cut something to make ungrammatical
+  measurably deletes words. It has to cut something to make ungrammatical
   input read cleanly. The raw transcript is always stored and always shown.
 - **Very short or very quiet clips are dropped.** Whisper hallucinates
   confident text out of silence ("Thank you."), so clips under 400ms or below
@@ -143,7 +143,7 @@ Requires Node 20+ and the Windows build tools that native modules need
 ```bash
 git clone https://github.com/mohsinjameelqureshi/typeflow-ai.git
 cd typeflow-ai
-npm install          # postinstall runs electron-rebuild — do not skip it
+npm install          # postinstall runs electron-rebuild, do not skip it
 npm run dev          # development, with hot reload
 npm run dist         # produces release/typeflow-ai.exe
 ```
@@ -178,18 +178,18 @@ Key released   →  silence/amplitude gate →  Groq Whisper large-v3-turbo
 - **Electron** main process owns the keyboard hook, the database, the network
   call and the insertion. The renderer is sandboxed with
   `contextIsolation: true`, `nodeIntegration: false` and a typed preload
-  bridge — it never touches the filesystem or the API key.
+  bridge. It never touches the filesystem or the API key.
 - **Insertion is via the clipboard**, not simulated typing. Typing character
   by character is visibly slow on long text and mangles non-ASCII and emoji.
   Your clipboard contents are restored afterwards.
 - **Audio playback** goes through a custom `typeflow-audio://` protocol that
-  resolves files in the main process from a dictation id — the renderer can
+  resolves files in the main process from a dictation id. The renderer can
   never name a path.
 - **Speech providers are behind an interface** (`src/services/speech/types.ts`)
   with one implementation. Swapping Groq for a local whisper.cpp or another
   API is meant to be a small change.
 
-[`CLAUDE.md`](CLAUDE.md) is the real build specification — measured latency
+[`CLAUDE.md`](CLAUDE.md) is the real build specification: measured latency
 numbers, the constraints that silently break Electron dictation apps, and why
 each decision went the way it did. Read it before contributing.
 
