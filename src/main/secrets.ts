@@ -9,7 +9,7 @@ import { resetSpeechProvider } from '../services/speech/index.js'
  *
  * It deliberately does NOT live in the settings table. safeStorage hands the
  * ciphertext to the Windows Credential Manager's DPAPI, keyed to this user
- * account, so a copied wispr.db is worthless on another machine.
+ * account, so a copied typeflow.db is worthless on another machine.
  */
 const FILE = () => join(app.getPath('userData'), 'groq-key.bin')
 

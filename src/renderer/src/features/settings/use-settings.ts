@@ -27,7 +27,7 @@ export function useSettings(): SettingsStore {
   }, [settings])
 
   useEffect(() => {
-    void window.wispr.settings
+    void window.typeflow.settings
       .getAll()
       .then(setSettings)
       .catch(() => setError('Could not read your settings.'))
@@ -39,7 +39,7 @@ export function useSettings(): SettingsStore {
     setSettings((s) => (s ? { ...s, [key]: value } : s))
 
     try {
-      await window.wispr.settings.set(key, value)
+      await window.typeflow.settings.set(key, value)
     } catch {
       setSettings((s) => (s ? { ...s, [key]: previous } : s))
       setError('That change could not be saved.')

@@ -49,7 +49,7 @@ export function GeneralTab({ settings, save }: SettingsStore) {
       </Section>
 
       <Section title="Windows">
-        <Row label="Open at login" hint="Start Wispr AI in the tray when you sign in.">
+        <Row label="Open at login" hint="Start TypeFlow AI in the tray when you sign in.">
           <Toggle
             label="Open at login"
             checked={flag('launchOnStartup')}

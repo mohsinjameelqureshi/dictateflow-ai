@@ -34,7 +34,7 @@ if (!app.requestSingleInstanceLock()) {
   // Must match `appId` in electron-builder.yml. Windows keys the taskbar
   // button — and the icon it shows — off this, not off the window. Without it
   // the app groups under the generic Electron entry in dev.
-  app.setAppUserModelId('com.mjq.wispr-ai')
+  app.setAppUserModelId('com.mjq.typeflow-ai')
 
   app.whenReady().then(() => {
     // Renderer runs no remote content, so lock the CSP down. Vite's dev
@@ -58,7 +58,7 @@ if (!app.requestSingleInstanceLock()) {
                 // Nothing remote is ever loaded — the Groq call happens in the
                 // main process, which is why connect-src stays at 'self'.
                 //
-                // `media-src wispr-audio:` is what lets history play a
+                // `media-src typeflow-audio:` is what lets history play a
                 // recording (§6.8). It is deliberately narrower than adding
                 // file: — the scheme resolves an ID through the database, so
                 // the renderer cannot name a path.

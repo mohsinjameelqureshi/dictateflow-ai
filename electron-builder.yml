@@ -1,5 +1,8 @@
-appId: com.mjq.wispr-ai
-productName: Wispr AI
+appId: com.mjq.typeflow-ai
+productName: TypeFlow AI
+# ${productName} contains a space, so the installer is named with it. Keep the
+# extension last — electron-builder matches the target off it.
+artifactName: ${productName}-${version}-setup.${ext}
 directories:
   buildResources: build
   output: release
@@ -30,5 +33,14 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  # Per-user, deliberately. Beyond avoiding an admin prompt to install, a
+  # per-machine install puts the app in a directory it cannot write, and does
+  # nothing to help the UIPI limitation in CLAUDE.md §6.4.
   perMachine: false
-# Rename before any public release — see CLAUDE.md §1.
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: TypeFlow AI
+  # This is the electron-builder default, but it is stated explicitly because
+  # the cost of it ever flipping is the user's entire dictation history and
+  # every recording deleted by an uninstall they expected to be reversible.
+  deleteAppDataOnUninstall: false

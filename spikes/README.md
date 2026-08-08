@@ -54,7 +54,7 @@ above 0.01 and a sane byte size, the silent clip is flagged
 `would REJECT: peak below floor`, and the fast tap is flagged
 `would REJECT: under 400ms`.
 
-WAV files land in `%TEMP%\wispr-spike-audio` — "Open output folder" takes
+WAV files land in `%TEMP%\typeflow-spike-audio` — "Open output folder" takes
 you there. Play one back to confirm it is not garbage.
 
 ## Automated run
@@ -93,7 +93,7 @@ renames its title bar to the document's first line, so a *successful* paste
 changed the title of the very window being checked:
 
 ```
-*Monday(145-335 PM) - Notepad   ->   *Hello from Wispr spike 2 — ... - Notepad
+*Monday(145-335 PM) - Notepad   ->   *Hello from TypeFlow spike 2 — ... - Notepad
 ```
 
 Same window throughout. `getActiveWindow().windowHandle` (the HWND) stayed

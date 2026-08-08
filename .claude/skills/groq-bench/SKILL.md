@@ -1,6 +1,6 @@
 ---
 name: groq-bench
-description: Measure Wispr AI transcription latency reproducibly and log results, so performance claims rest on numbers instead of intuition. Use when answering open questions §15.1 (does connection reuse recover 200-400ms?) and §15.2 (does chunked upload deliver?), when latency regresses, or before claiming any optimization worked.
+description: Measure TypeFlow AI transcription latency reproducibly and log results, so performance claims rest on numbers instead of intuition. Use when answering open questions §15.1 (does connection reuse recover 200-400ms?) and §15.2 (does chunked upload deliver?), when latency regresses, or before claiming any optimization worked.
 ---
 
 # Groq latency benchmark

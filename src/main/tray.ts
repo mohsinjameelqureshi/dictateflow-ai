@@ -15,7 +15,7 @@ export function createTray(): Tray {
   if (tray) return tray
 
   tray = new Tray(trayIcon())
-  tray.setToolTip('Wispr AI')
+  tray.setToolTip('TypeFlow AI')
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open', click: () => focusMainWindow() },

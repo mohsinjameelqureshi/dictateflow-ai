@@ -31,8 +31,8 @@ export function DataTab({ settings, save }: SettingsStore) {
     try {
       const result: TransferResult =
         which === "export"
-          ? await window.wispr.data.export()
-          : await window.wispr.data.import();
+          ? await window.typeflow.data.export()
+          : await window.typeflow.data.import();
 
       // Cancelling a file dialog is a normal thing to do, not an outcome that
       // needs reporting back.
@@ -65,7 +65,7 @@ export function DataTab({ settings, save }: SettingsStore) {
     setNote(null);
     setProblem(null);
     try {
-      await window.wispr.insights.rebuild();
+      await window.typeflow.insights.rebuild();
       setNote("Statistics recalculated from your history.");
     } catch {
       setProblem("Could not recalculate the statistics.");
@@ -164,7 +164,7 @@ function Recordings({
   const [clearing, setClearing] = useState(false);
 
   const refresh = useCallback(() => {
-    void window.wispr.recordings
+    void window.typeflow.recordings
       .stats()
       .then(setStats)
       .catch(() => setStats(null));
@@ -182,7 +182,7 @@ function Recordings({
   const clear = async () => {
     setClearing(true);
     try {
-      setStats(await window.wispr.recordings.clear());
+      setStats(await window.typeflow.recordings.clear());
     } catch {
       refresh();
     } finally {

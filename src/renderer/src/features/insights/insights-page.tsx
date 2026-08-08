@@ -27,7 +27,7 @@ export function InsightsPage() {
 
   const load = useCallback(async () => {
     try {
-      setData(await window.wispr.insights.get())
+      setData(await window.typeflow.insights.get())
     } catch {
       setError('Could not read your statistics.')
     }
@@ -38,7 +38,7 @@ export function InsightsPage() {
   }, [load])
 
   // A finished dictation changes every number here.
-  useEffect(() => window.wispr.dictations.onChanged(() => void load()), [load])
+  useEffect(() => window.typeflow.dictations.onChanged(() => void load()), [load])
 
   return (
     <Page title="Insights" description="Derived from your local history.">

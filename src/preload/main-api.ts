@@ -144,4 +144,4 @@ export const mainApi = {
   },
 } as const
 
-export type WisprApi = typeof mainApi
+export type TypeFlowApi = typeof mainApi

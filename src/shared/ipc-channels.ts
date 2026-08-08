@@ -101,7 +101,7 @@ export const IPC_EVENT = {
  * Passed to the widget window via `additionalArguments` so the single
  * sandboxed preload bundle knows which surface to expose. See preload/index.ts.
  */
-export const WIDGET_ROLE_ARG = '--wispr-role=widget'
+export const WIDGET_ROLE_ARG = '--typeflow-role=widget'
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
 export type IpcEventChannel = (typeof IPC_EVENT)[keyof typeof IPC_EVENT]

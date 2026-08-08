@@ -19,14 +19,14 @@ export function ApiKeyCard() {
   const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
-    void window.wispr.apiKey.status().then(setStatus);
+    void window.typeflow.apiKey.status().then(setStatus);
   }, []);
 
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
-      setStatus(await window.wispr.apiKey.set(draft));
+      setStatus(await window.typeflow.apiKey.set(draft));
       setDraft("");
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
@@ -39,7 +39,7 @@ export function ApiKeyCard() {
 
   const clear = async () => {
     setError(null);
-    setStatus(await window.wispr.apiKey.clear());
+    setStatus(await window.typeflow.apiKey.clear());
   };
 
   return (

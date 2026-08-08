@@ -62,12 +62,12 @@ export interface RecordingsStats {
  * canonicalises the host as a hostname, and an all-numeric host becomes an
  * IPv4 address:
  *
- *     wispr-audio://123      ->  wispr-audio://0.0.0.123/
- *     wispr-audio://clip/123 ->  unchanged
+ *     typeflow-audio://123      ->  typeflow-audio://0.0.0.123/
+ *     typeflow-audio://clip/123 ->  unchanged
  *
  * The id therefore lives in the PATH. Never move it back to the host.
  */
-export const AUDIO_SCHEME = 'wispr-audio'
+export const AUDIO_SCHEME = 'typeflow-audio'
 export const AUDIO_HOST = 'clip'
 
 export function audioUrl(dictationId: number): string {
@@ -98,7 +98,7 @@ export interface DictationDto {
   favorite: boolean
   /**
    * Whether a recording exists for this row (§8). Deliberately a boolean and
-   * not the filename: the renderer plays `wispr-audio://<id>` and never names
+   * not the filename: the renderer plays `typeflow-audio://<id>` and never names
    * a file, so handing it one would only be an invitation.
    *
    * False for every row written before Phase 6 — those render a disabled
@@ -157,7 +157,15 @@ export function isThemeChoice(value: string): value is ThemeChoice {
  * The API key is absent too — safeStorage only, never JSON (§2).
  */
 export const BACKUP_FORMAT = 1
-export const BACKUP_APP = 'wispr-ai'
+export const BACKUP_APP = 'typeflow-ai'
+
+/**
+ * The app id this file was written under before the project was renamed. Only
+ * ever accepted on import, never written — a backup the user made yesterday
+ * has to keep importing tomorrow, or the export feature quietly broke the one
+ * promise it makes.
+ */
+export const BACKUP_APP_LEGACY = 'wispr-ai'
 
 export interface BackupDictation {
   rawText: string

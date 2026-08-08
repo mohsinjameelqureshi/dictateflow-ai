@@ -1,4 +1,4 @@
-# Wispr AI — Build Specification
+# TypeFlow AI — Build Specification
 
 **Version** 2.1
 **Updated** 2026-08-07
@@ -23,9 +23,13 @@ multi-user features, authentication, or account systems.
 
 ### Naming
 
-The upstream product is made by a company named _Wispr AI, Inc._ Before any
-public release, rename this project. Internal codename is fine for now.
-Not legal advice — but do not publish under this name.
+This project was built under the working name _Wispr AI_, which is the legal
+name of the company behind Wispr Flow — the commercial product it is modelled
+on. It was renamed to **TypeFlow AI** on 2026-08-08, before going public.
+
+Do not reintroduce the old name. It survives in git history and in two
+comments that cite Wispr Flow as a real product for calibration (§4); those
+citations are correct and should stay.
 
 ---
 
@@ -307,7 +311,7 @@ dictation id — never from a path supplied by the renderer.
 // before app.whenReady()
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: "wispr-audio",
+    scheme: "typeflow-audio",
     privileges: {
       standard: true,
       secure: true,
@@ -318,8 +322,8 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // after ready
-protocol.handle("wispr-audio", async (req) => {
-  const id = Number(new URL(req.url).hostname); // wispr-audio://123
+protocol.handle("typeflow-audio", async (req) => {
+  const id = Number(new URL(req.url).hostname); // typeflow-audio://123
   const row = getDictation(id); // DB is the only source of truth
   if (!row?.audioFile) return new Response(null, { status: 404 });
 
@@ -334,7 +338,7 @@ protocol.handle("wispr-audio", async (req) => {
 `path.basename` plus the prefix check are both required. One of them alone is
 a path-traversal hole.
 
-Add `media-src 'self' wispr-audio:;` to the renderer CSP.
+Add `media-src 'self' typeflow-audio:;` to the renderer CSP.
 
 **Store the exact bytes that were sent to the provider.** The reason to keep a
 recording is to hear what actually happened when a transcript is wrong.
@@ -367,7 +371,7 @@ src/
 │   │   └── clipboard.ts      save → paste → restore
 │   ├── audio/
 │   │   ├── store.ts          write/delete/sweep recordings/
-│   │   └── protocol.ts       wispr-audio:// handler (§6.8)
+│   │   └── protocol.ts       typeflow-audio:// handler (§6.8)
 │   └── ipc/
 │       └── handlers.ts       typed channels only
 │
@@ -696,7 +700,7 @@ Keep the audio for every session and let the user hear it back from history.
 1. **Persist the clip.** On a successful dictation, write the exact WAV that
    was sent to the provider into `recordings/` and record `audioFile`,
    `audioBytes`, and `audioMime` on the row. File first, then row (§6.8).
-2. **Serve it.** Register the `wispr-audio://` scheme and its handler, and
+2. **Serve it.** Register the `typeflow-audio://` scheme and its handler, and
    widen the renderer CSP to `media-src`.
 3. **Play control.** Every session row in Dictation gets a Play button in the
    same action group as copy, delete, and favorite. It sits first — it is the

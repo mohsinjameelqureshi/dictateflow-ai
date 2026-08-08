@@ -12,7 +12,7 @@ const path = require('node:path')
 const fs = require('node:fs/promises')
 const os = require('node:os')
 
-const OUT_DIR = path.join(os.tmpdir(), 'wispr-spike-audio')
+const OUT_DIR = path.join(os.tmpdir(), 'typeflow-spike-audio')
 
 function createWindow() {
   const win = new BrowserWindow({

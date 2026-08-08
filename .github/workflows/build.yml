@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # windows-latest is not a preference. The keyboard hook, the insertion
+    # path and the packaging target are all Windows-specific, and the native
+    # modules are compiled at install time against Electron's ABI.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` triggers postinstall -> electron-rebuild, which compiles
+      # better-sqlite3 and uiohook-napi. This is the slow step and the one
+      # that actually proves a fresh clone builds.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

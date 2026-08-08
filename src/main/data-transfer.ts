@@ -5,6 +5,7 @@ import { rebuildDailyStats } from '../db/stats.js'
 import { localDayKey } from '../shared/day.js'
 import {
   BACKUP_APP,
+  BACKUP_APP_LEGACY,
   BACKUP_FORMAT,
   SETTING_KEYS,
   countWords,
@@ -35,7 +36,7 @@ import { applyTheme } from './theme.js'
  */
 
 function fileName(): string {
-  return `wispr-backup-${localDayKey(new Date())}.json`
+  return `typeflow-backup-${localDayKey(new Date())}.json`
 }
 
 /* ------------------------------------------------------------- export ---- */
@@ -120,10 +121,12 @@ function parseBackup(raw: string): BackupFile | string {
     return 'That file is not valid JSON.'
   }
 
-  if (!isObject(data)) return 'That file does not look like a Wispr AI backup.'
-  if (data['app'] !== BACKUP_APP) return 'That file was not exported by Wispr AI.'
+  if (!isObject(data)) return 'That file does not look like a TypeFlow AI backup.'
+  if (data['app'] !== BACKUP_APP && data['app'] !== BACKUP_APP_LEGACY) {
+    return 'That file was not exported by TypeFlow AI.'
+  }
   if (num(data['format']) > BACKUP_FORMAT) {
-    return 'That backup came from a newer version of Wispr AI.'
+    return 'That backup came from a newer version of TypeFlow AI.'
   }
 
   const dictations: BackupDictation[] = (

@@ -21,7 +21,7 @@ import { clipboard, keyboard, Key, getActiveWindow, sleep } from '@nut-tree-fork
 
 keyboard.config.autoDelayMs = 0
 
-const TEXT = 'Hello from Wispr spike 2 — ünïcödé and 🎤 included.'
+const TEXT = 'Hello from TypeFlow spike 2 — ünïcödé and 🎤 included.'
 const SENTINEL = `sentinel-${Date.now()}`
 const RESTORE_DELAY_MS = 150
 

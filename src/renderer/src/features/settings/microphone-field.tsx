@@ -28,7 +28,7 @@ export function MicrophoneField({
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setDevices(await window.wispr.devices.list())
+      setDevices(await window.typeflow.devices.list())
     } catch {
       setDevices([])
     } finally {

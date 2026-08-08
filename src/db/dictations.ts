@@ -23,7 +23,7 @@ export const toDto = (row: Dictation): DictationDto => ({
   dictionaryFixes: row.dictionaryFixes,
   favorite: row.favorite,
   // The filename never crosses the bridge — the renderer addresses a
-  // recording by dictation id through the wispr-audio scheme (§6.8).
+  // recording by dictation id through the typeflow-audio scheme (§6.8).
   hasAudio: !!row.audioFile,
   audioBytes: row.audioBytes ?? null,
   createdAt: row.createdAt.getTime(),

@@ -73,30 +73,30 @@ export function Widget() {
   // The widget floats over the user's own screen, so it follows the app's
   // theme like everything else — `getTheme`/`onTheme` rather than settings,
   // which this surface deliberately cannot reach.
-  useTheme(window.wisprWidget.theme)
+  useTheme(window.typeflowWidget.theme)
 
-  useEffect(() => window.wisprWidget.onState(setPayload), [])
+  useEffect(() => window.typeflowWidget.onState(setPayload), [])
 
   // Settings asks for the microphone list through here. Answering always —
   // even on failure — is what keeps the picker from sitting on a 5s timeout.
   useEffect(
     () =>
-      window.wisprWidget.onEnumerate(({ requestId }) => {
+      window.typeflowWidget.onEnumerate(({ requestId }) => {
         void listAudioInputs(!recorder.recording)
           .catch(() => [])
-          .then((devices) => window.wisprWidget.sendDevices(requestId, devices))
+          .then((devices) => window.typeflowWidget.sendDevices(requestId, devices))
       }),
     [recorder],
   )
 
   useEffect(
     () =>
-      window.wisprWidget.onCommand((command) => {
+      window.typeflowWidget.onCommand((command) => {
         switch (command.type) {
           case 'start':
             void recorder.start(command.deviceId).catch((err: unknown) => {
               const e = err as Error
-              void window.wisprWidget.reportMicError({
+              void window.typeflowWidget.reportMicError({
                 name: e.name ?? 'Error',
                 message:
                   e.name === 'NotAllowedError'
@@ -108,7 +108,7 @@ export function Widget() {
             })
             return
           case 'stop':
-            void window.wisprWidget.sendClip(recorder.stop())
+            void window.typeflowWidget.sendClip(recorder.stop())
             return
           case 'cancel':
             recorder.cancel()

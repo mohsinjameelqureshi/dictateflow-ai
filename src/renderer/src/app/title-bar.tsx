@@ -25,29 +25,29 @@ import { cn } from '@/lib/utils.js'
  */
 export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle: () => void } }) {
   const [maximized, setMaximized] = useState(false)
-  const theme = useResolvedTheme(window.wispr.theme)
+  const theme = useResolvedTheme(window.typeflow.theme)
 
   useEffect(() => {
-    void window.wispr.window.isMaximized().then(setMaximized)
+    void window.typeflow.window.isMaximized().then(setMaximized)
   }, [])
 
   const controls = [
     {
       label: 'Minimize',
       icon: Minus,
-      onClick: () => void window.wispr.window.minimize(),
+      onClick: () => void window.typeflow.window.minimize(),
       danger: false,
     },
     {
       label: maximized ? 'Restore' : 'Maximize',
       icon: maximized ? Copy : Square,
-      onClick: () => void window.wispr.window.maximize().then(setMaximized),
+      onClick: () => void window.typeflow.window.maximize().then(setMaximized),
       danger: false,
     },
     {
       label: 'Close',
       icon: X,
-      onClick: () => void window.wispr.window.close(),
+      onClick: () => void window.typeflow.window.close(),
       danger: true,
     },
   ]
@@ -74,7 +74,7 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
         <Tooltip label={themeLabel}>
           <button
             onClick={() => {
-              void window.wispr.settings.set('theme', dark ? 'light' : 'dark').catch(() => {})
+              void window.typeflow.settings.set('theme', dark ? 'light' : 'dark').catch(() => {})
             }}
             aria-label={themeLabel}
             className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"

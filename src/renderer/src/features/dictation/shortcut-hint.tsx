@@ -36,8 +36,8 @@ export function ShortcutHint() {
   const openSettings = useSettingsDialog((s) => s.open)
 
   useEffect(() => {
-    void window.wispr.settings.getAll().then((s) => setShortcut(s.shortcut ?? ''))
-    return window.wispr.settings.onChanged((s) => setShortcut(s.shortcut ?? ''))
+    void window.typeflow.settings.getAll().then((s) => setShortcut(s.shortcut ?? ''))
+    return window.typeflow.settings.onChanged((s) => setShortcut(s.shortcut ?? ''))
   }, [])
 
   // Nothing at all until the value is known — flashing "not set" and then
