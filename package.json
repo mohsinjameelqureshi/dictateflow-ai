@@ -18,8 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder",
-    "screenshots": "python scripts/patch-screenshots.py"
+    "dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",
