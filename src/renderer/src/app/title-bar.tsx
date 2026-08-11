@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Tooltip } from '@/components/ui/tooltip.js'
 import { useResolvedTheme } from '@/lib/theme.js'
 import { cn } from '@/lib/utils.js'
+import { TitleBarMic } from './title-bar-mic.js'
 
 /**
  * Custom title bar (§12). The window is frameless, so this provides both the
@@ -100,7 +101,10 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
         </Tooltip>
       </div>
 
-      <div className="no-drag flex h-full">
+      <div className="no-drag flex h-full items-center">
+        <div className="mr-1 flex items-center">
+          <TitleBarMic />
+        </div>
         {controls.map(({ label, icon: Icon, onClick, danger }) => (
           <Tooltip key={label} label={label} className="h-full">
             <button
