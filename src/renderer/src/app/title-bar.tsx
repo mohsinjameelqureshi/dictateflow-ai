@@ -1,9 +1,11 @@
-import { Minus, Moon, PanelLeftClose, PanelLeftOpen, Square, Sun, X, Copy } from 'lucide-react'
+import { Github, Minus, Moon, PanelLeftClose, PanelLeftOpen, Square, Sun, X, Copy } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tooltip } from '@/components/ui/tooltip.js'
 import { useResolvedTheme } from '@/lib/theme.js'
 import { cn } from '@/lib/utils.js'
 import { TitleBarMic } from './title-bar-mic.js'
+
+const GITHUB_URL = 'https://github.com/mohsinjameelqureshi/dictateflow-ai'
 
 /**
  * Custom title bar (§12). The window is frameless, so this provides both the
@@ -102,8 +104,19 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
       </div>
 
       <div className="no-drag flex h-full items-center">
-        <div className="mr-1 flex items-center">
+        <div className="mr-1 flex items-center gap-0.5">
           <TitleBarMic />
+          <Tooltip label="Star on GitHub">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Star on GitHub"
+              className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-line-soft hover:text-ink"
+            >
+              <Github size={16} strokeWidth={2} />
+            </a>
+          </Tooltip>
         </div>
         {controls.map(({ label, icon: Icon, onClick, danger }) => (
           <Tooltip key={label} label={label} className="h-full">
