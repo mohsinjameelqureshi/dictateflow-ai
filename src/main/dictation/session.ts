@@ -73,24 +73,21 @@ class DictationSession {
   }
 
   async #openMic(gen: number): Promise<void> {
-    // §6.2 — capture the target BEFORE the widget is shown. Once it is up,
-    // "what had focus" is no longer answerable. This costs a few milliseconds,
-    // unlike waiting on getUserMedia, which is what §11 actually forbids.
-    const target = await captureTarget()
-
-    // A very short tap can cancel before this resolves; do not resurrect it.
-    if (gen !== this.#gen) return
-    this.#target = target
+    const deviceId = readSettings().microphoneId ?? ''
 
     // §11 — Listening appears immediately, before the mic is ready. The widget
-    // is the feedback that the key registered.
+    // is the feedback that the key registered. Start capture in parallel with
+    // target resolution — external mics can take hundreds of ms on
+    // getUserMedia, and that delay must not eat the first syllable.
     this.#state('listening')
     showWidget()
+    sendToWidget(IPC_EVENT.widgetCommand, { type: 'start', deviceId })
 
-    sendToWidget(IPC_EVENT.widgetCommand, {
-      type: 'start',
-      deviceId: readSettings().microphoneId ?? '',
-    })
+    // §6.2 — the widget is focusable:false, so showing it does not steal the
+    // insert target. Capture in parallel rather than blocking on it first.
+    const target = await captureTarget()
+    if (gen !== this.#gen) return
+    this.#target = target
   }
 
   /* ---------------------------------------------------------- key up ---- */

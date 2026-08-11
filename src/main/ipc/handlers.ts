@@ -41,6 +41,7 @@ import { session } from '../dictation/session.js'
 import { readSettings, writeSetting } from '../settings.js'
 import { onShortcutChanged, setShortcutSuspended } from '../shortcut/index.js'
 import { openSettings } from '../windows/main-window.js'
+import { prepareWidgetMic } from '../windows/widget-window.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -256,8 +257,11 @@ function applySettingEffect(key: SettingKey, value: string): void {
       // Resolves 'system' and pushes the answer to all three windows.
       applyTheme(value)
       return
+    case 'microphoneId':
+      prepareWidgetMic(value)
+      return
     default:
-      // `microphoneId`, `language` and friends are read at the point of use.
+      // `language` and friends are read at the point of use.
       return
   }
 }

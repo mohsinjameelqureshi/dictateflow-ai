@@ -2,7 +2,7 @@ import { IPC_EVENT } from '../../shared/ipc-channels.js'
 import type { AudioInputDevice } from '../../shared/types.js'
 import { broadcastDevicesChanged, broadcastSettings } from '../broadcast.js'
 import { readSetting, readSettings, writeSetting } from '../settings.js'
-import { getWidgetWindow, sendToWidget } from '../windows/widget-window.js'
+import { getWidgetWindow, prepareWidgetMic, sendToWidget } from '../windows/widget-window.js'
 
 /**
  * The microphone list, fetched through the widget.
@@ -33,6 +33,7 @@ export function reconcileMicrophoneId(devices: AudioInputDevice[]): void {
   if (!id) return
   if (devices.some((d) => d.deviceId === id)) return
   writeSetting('microphoneId', '')
+  prepareWidgetMic('')
   broadcastSettings(readSettings())
 }
 

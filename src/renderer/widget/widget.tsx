@@ -124,6 +124,9 @@ export function Widget() {
             return
           case 'cancel':
             recorder.cancel()
+            return
+          case 'prepare':
+            void recorder.prepare(command.deviceId)
         }
       }),
     [recorder],

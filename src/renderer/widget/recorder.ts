@@ -151,6 +151,12 @@ export class Recorder {
   #ctx: AudioContext | null = null
   #workletReady: Promise<void> | null = null
   #stream: MediaStream | null = null
+  /** Warm capture stream kept open between dictations for a chosen device. */
+  #heldStream: MediaStream | null = null
+  #heldDeviceId: string | null = null
+  #lastDeviceId = ''
+  /** Bumped on cancel so a late start() cannot begin recording. */
+  #startGen = 0
   #node: AudioWorkletNode | null = null
   #source: MediaStreamAudioSourceNode | null = null
   #frames: Float32Array[] = []
@@ -211,16 +217,64 @@ export class Recorder {
     return this.#workletReady
   }
 
+  /**
+   * Open the capture stream while idle so key-down skips getUserMedia.
+   * Only used for an explicit device pick — the system default is fast enough.
+   */
+  async prepare(deviceId: string): Promise<void> {
+    if (this.#recording) return
+
+    if (!deviceId) {
+      this.#releaseHeldStream()
+      return
+    }
+
+    if (this.#heldDeviceId === deviceId && this.#heldStream?.active) return
+
+    this.#releaseHeldStream()
+    await this.warm()
+
+    try {
+      this.#heldStream = await openStream(deviceId)
+      this.#heldDeviceId = deviceId
+    } catch {
+      this.#releaseHeldStream()
+    }
+  }
+
+  #releaseHeldStream(): void {
+    this.#heldStream?.getTracks().forEach((t) => t.stop())
+    this.#heldStream = null
+    this.#heldDeviceId = null
+  }
+
   async start(deviceId: string): Promise<void> {
+    const gen = ++this.#startGen
     this.#frames = []
     this.#peak = 0
+    this.#lastDeviceId = deviceId
 
     await this.warm()
     const ctx = this.#ctx
     if (!ctx) throw new Error('AudioContext unavailable')
     if (ctx.state === 'suspended') await ctx.resume()
 
-    this.#stream = await openStream(deviceId)
+    let stream: MediaStream
+    if (deviceId && this.#heldDeviceId === deviceId && this.#heldStream) {
+      stream = this.#heldStream
+      this.#heldStream = null
+      this.#heldDeviceId = null
+    } else {
+      this.#releaseHeldStream()
+      stream = await openStream(deviceId)
+    }
+
+    if (gen !== this.#startGen) {
+      stream.getTracks().forEach((t) => t.stop())
+      return
+    }
+
+    this.#stream = stream
 
     this.#source = ctx.createMediaStreamSource(this.#stream)
     this.#node = new AudioWorkletNode(ctx, 'tap')
@@ -328,7 +382,7 @@ export class Recorder {
   }
 
   /** Tear down the graph and release the mic, keeping the context warm. */
-  #teardown(): number {
+  #teardown(keepStream = false): number {
     // A stop can arrive before start() ever resolved — a mic error, or a tap
     // so short the graph never came up. Report 0 rather than the time since
     // the epoch, which would sail past the §6.6 duration guard.
@@ -338,7 +392,15 @@ export class Recorder {
     if (this.#node) this.#node.port.onmessage = null
     this.#source?.disconnect()
     this.#node?.disconnect()
-    this.#stream?.getTracks().forEach((t) => t.stop())
+
+    if (keepStream && this.#stream && this.#lastDeviceId) {
+      this.#heldStream = this.#stream
+      this.#heldDeviceId = this.#lastDeviceId
+    } else {
+      this.#stream?.getTracks().forEach((t) => t.stop())
+      this.#heldStream = null
+      this.#heldDeviceId = null
+    }
 
     this.#source = null
     this.#node = null
@@ -364,7 +426,8 @@ export class Recorder {
   }
 
   stop(): ClipPayload {
-    const durationMs = this.#teardown()
+    const keepStream = !!this.#lastDeviceId
+    const durationMs = this.#teardown(keepStream)
     const sampleRate = this.#ctx?.sampleRate ?? TARGET_RATE
     const samples = this.#frames.reduce((n, f) => n + f.length, 0)
     const bytes = encodeWav(this.#frames, sampleRate)
@@ -378,7 +441,8 @@ export class Recorder {
 
   /** Esc — drop the buffer without encoding it. */
   cancel(): void {
-    this.#teardown()
+    this.#startGen += 1
+    this.#teardown(!!this.#lastDeviceId)
     this.#frames = []
     this.#peak = 0
   }

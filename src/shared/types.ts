@@ -314,6 +314,8 @@ export type WidgetCommand =
   | { type: 'start'; deviceId: string }
   | { type: 'stop' }
   | { type: 'cancel' }
+  /** Open (or release) a capture stream before key-down. External mics are slow. */
+  | { type: 'prepare'; deviceId: string }
 
 export interface ClipMeta {
   sampleRate: number
