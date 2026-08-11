@@ -1,6 +1,6 @@
 ---
 name: insert-pipeline
-description: Correctness rules for the TypeFlow AI audio-to-text-insertion path — silence rejection, transcription, dictionary/LLM ordering, clipboard insertion, and failure detection. Read before editing anything under src/services/speech/, src/services/enhance/, src/services/audio/, or src/main/insert/.
+description: Correctness rules for the DictateFlow AI audio-to-text-insertion path — silence rejection, transcription, dictionary/LLM ordering, clipboard insertion, and failure detection. Read before editing anything under src/services/speech/, src/services/enhance/, src/services/audio/, or src/main/insert/.
 ---
 
 # Insert pipeline

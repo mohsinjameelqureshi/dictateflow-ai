@@ -5,8 +5,7 @@ import type { ApiKeyStatus } from "@shared/types.js";
 
 /**
  * The Groq key. It is the only secret in the app (§2) and the only thing
- * standing between a fresh install and a working dictation, which is why it
- * lands in Phase 2 rather than waiting for the rest of Settings in Phase 5.
+ * standing between a fresh install and a working dictation. Lives in Settings → API.
  *
  * The value is never read back into the renderer — `status()` returns whether
  * one exists, not what it is.
@@ -19,14 +18,14 @@ export function ApiKeyCard() {
   const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
-    void window.typeflow.apiKey.status().then(setStatus);
+    void window.dictateflow.apiKey.status().then(setStatus);
   }, []);
 
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
-      setStatus(await window.typeflow.apiKey.set(draft));
+      setStatus(await window.dictateflow.apiKey.set(draft));
       setDraft("");
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);
@@ -39,7 +38,7 @@ export function ApiKeyCard() {
 
   const clear = async () => {
     setError(null);
-    setStatus(await window.typeflow.apiKey.clear());
+    setStatus(await window.dictateflow.apiKey.clear());
   };
 
   return (

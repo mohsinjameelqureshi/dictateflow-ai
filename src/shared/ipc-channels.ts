@@ -69,6 +69,8 @@ export const IPC = {
   widgetClip: 'widget:clip',
   widgetMicError: 'widget:micError',
   widgetDevices: 'widget:devices',
+  /** widget -> main: the OS device list changed (plug/unplug). */
+  widgetDevicesChanged: 'widget:devicesChanged',
 
   /* diagnostics */
   appInfo: 'app:info',
@@ -95,13 +97,15 @@ export const IPC_EVENT = {
   theme: 'app:theme',
   /** main -> every window: a setting changed, here is the whole table */
   settingsChanged: 'settings:changed',
+  /** main -> main window: microphones plugged or unplugged */
+  devicesChanged: 'devices:changed',
 } as const
 
 /**
  * Passed to the widget window via `additionalArguments` so the single
  * sandboxed preload bundle knows which surface to expose. See preload/index.ts.
  */
-export const WIDGET_ROLE_ARG = '--typeflow-role=widget'
+export const WIDGET_ROLE_ARG = '--dictateflow-role=widget'
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
 export type IpcEventChannel = (typeof IPC_EVENT)[keyof typeof IPC_EVENT]

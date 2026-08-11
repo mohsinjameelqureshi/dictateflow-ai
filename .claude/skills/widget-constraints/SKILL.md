@@ -1,6 +1,6 @@
 ---
 name: widget-constraints
-description: Non-negotiable constraints for the TypeFlow AI floating widget window — focus, positioning, security flags, and the complete state table. Read before creating or editing any BrowserWindow, anything under src/main/windows/ or src/renderer/widget/, or any code that positions or shows the widget.
+description: Non-negotiable constraints for the DictateFlow AI floating widget window — focus, positioning, security flags, and the complete state table. Read before creating or editing any BrowserWindow, anything under src/main/windows/ or src/renderer/widget/, or any code that positions or shows the widget.
 ---
 
 # Widget constraints

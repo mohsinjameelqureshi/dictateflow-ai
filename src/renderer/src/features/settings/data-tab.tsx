@@ -31,8 +31,8 @@ export function DataTab({ settings, save }: SettingsStore) {
     try {
       const result: TransferResult =
         which === "export"
-          ? await window.typeflow.data.export()
-          : await window.typeflow.data.import();
+          ? await window.dictateflow.data.export()
+          : await window.dictateflow.data.import();
 
       // Cancelling a file dialog is a normal thing to do, not an outcome that
       // needs reporting back.
@@ -65,7 +65,7 @@ export function DataTab({ settings, save }: SettingsStore) {
     setNote(null);
     setProblem(null);
     try {
-      await window.typeflow.insights.rebuild();
+      await window.dictateflow.insights.rebuild();
       setNote("Statistics recalculated from your history.");
     } catch {
       setProblem("Could not recalculate the statistics.");
@@ -164,7 +164,7 @@ function Recordings({
   const [clearing, setClearing] = useState(false);
 
   const refresh = useCallback(() => {
-    void window.typeflow.recordings
+    void window.dictateflow.recordings
       .stats()
       .then(setStats)
       .catch(() => setStats(null));
@@ -182,7 +182,7 @@ function Recordings({
   const clear = async () => {
     setClearing(true);
     try {
-      setStats(await window.typeflow.recordings.clear());
+      setStats(await window.dictateflow.recordings.clear());
     } catch {
       refresh();
     } finally {

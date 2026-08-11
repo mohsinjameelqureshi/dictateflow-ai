@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
  * NOTHING IN bench/fixtures/ IS COMMITTED, and that is deliberate: a recording
  * of someone's voice is personal data, and this repo is public. Supply your
  * own. The easiest way is to dictate twice in the app and copy the WAVs out of
- * `%APPDATA%\typeflow-ai\recordings\`:
+ * `%APPDATA%\dictateflow-ai\recordings\`:
  *
  *   bench/fixtures/source-a.wav   ~8s of speech
  *   bench/fixtures/source-b.wav   ~11s of speech
@@ -44,7 +44,7 @@ function readPcm(name) {
         'voice and this repo is public. Supply your own two clips as\n' +
         'bench/fixtures/source-a.wav (~8s) and source-b.wav (~11s),\n' +
         '16kHz mono 16-bit. Dictating twice in the app and copying the WAVs\n' +
-        'out of %APPDATA%\\typeflow-ai\\recordings\\ is the quickest way.',
+        'out of %APPDATA%\\dictateflow-ai\\recordings\\ is the quickest way.',
     )
   }
   if (buf.length < 44 || buf.toString('ascii', 0, 4) !== 'RIFF') {

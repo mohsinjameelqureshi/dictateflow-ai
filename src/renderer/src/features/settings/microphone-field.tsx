@@ -12,8 +12,8 @@ import { Select } from './parts.js'
  * permission to the widget alone, and without it `enumerateDevices` returns
  * entries with empty labels. See main/audio/devices.ts.
  *
- * An empty stored value means "whatever Windows considers default", which is
- * also what an unplugged microphone should fall back to.
+ * An empty stored value means "whatever Windows considers default". When the
+ * chosen device disappears, main clears `microphoneId` and this field follows.
  */
 export function MicrophoneField({
   value,
@@ -28,7 +28,7 @@ export function MicrophoneField({
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setDevices(await window.typeflow.devices.list())
+      setDevices(await window.dictateflow.devices.list())
     } catch {
       setDevices([])
     } finally {
@@ -40,11 +40,7 @@ export function MicrophoneField({
     void load()
   }, [load])
 
-  // A microphone that was chosen once and has since been unplugged. Saying so
-  // beats a select that silently shows the wrong device as selected — which is
-  // what happens if the stored id matches no option, so one is kept for it.
-  const unlisted = !!value && !devices?.some((d) => d.deviceId === value)
-  const missing = unlisted && devices !== null
+  useEffect(() => window.dictateflow.devices.onChanged(() => void load()), [load])
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -61,7 +57,6 @@ export function MicrophoneField({
               {d.label}
             </option>
           ))}
-          {unlisted && <option value={value}>{missing ? 'Not connected' : 'Loading…'}</option>}
         </Select>
 
         <Tooltip label="Refresh">
@@ -77,12 +72,7 @@ export function MicrophoneField({
         </Tooltip>
       </div>
 
-      {missing && (
-        <p className="text-right text-[13px] text-danger">
-          That microphone is not connected. Dictation will use the system default.
-        </p>
-      )}
-      {devices?.length === 0 && !missing && (
+      {devices?.length === 0 && (
         <p className="text-right text-[13px] text-ink-muted">No microphones found.</p>
       )}
     </div>

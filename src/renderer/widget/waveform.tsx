@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Recorder } from './recorder.js'
 
-const BARS = 18
+const BARS = 12
 
-/** ~18 columns/second, so the 18 bars span about one second of speech. */
+/** ~12 columns/second — fits the narrower widget width. */
 const STEP_MS = 55
 
 /**
@@ -35,7 +35,7 @@ export function Waveform({ recorder }: { recorder: Recorder }) {
   if (reduced) {
     const level = bars[bars.length - 1] ?? 0
     return (
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-line-soft">
+      <div className="h-1.5 w-[72px] overflow-hidden rounded-full bg-line-soft">
         <div
           className="h-full rounded-full bg-accent transition-[width] duration-100"
           style={{ width: `${Math.round(level * 100)}%` }}
@@ -45,15 +45,13 @@ export function Waveform({ recorder }: { recorder: Recorder }) {
   }
 
   return (
-    <div className="flex h-8 flex-1 items-center gap-[3px]" aria-hidden>
+    <div className="flex h-5 w-[72px] items-center justify-center gap-[2px]" aria-hidden>
       {bars.map((v, i) => (
         <div
           key={i}
-          className="flex-1 rounded-full bg-accent"
+          className="w-[2px] shrink-0 rounded-full bg-accent"
           style={{
-            // A floor keeps the bar visible in silence; without it the widget
-            // looks broken in a quiet room.
-            height: `${Math.max(3, Math.round(v * 28))}px`,
+            height: `${Math.max(2, Math.round(v * 18))}px`,
             opacity: 0.35 + v * 0.65,
           }}
         />

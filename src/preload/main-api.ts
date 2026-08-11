@@ -73,6 +73,12 @@ export const mainApi = {
   devices: {
     /** Microphones, with real labels — relayed through the widget. */
     list: (): Promise<AudioInputDevice[]> => invoke(IPC.devicesList),
+    /** Fires when the OS reports a mic plugged or unplugged. */
+    onChanged: (cb: () => void): (() => void) => {
+      const listener = () => cb()
+      ipcRenderer.on(IPC_EVENT.devicesChanged, listener)
+      return () => ipcRenderer.off(IPC_EVENT.devicesChanged, listener)
+    },
   },
   dictations: {
     list: (query?: ListDictationsQuery): Promise<DictationDto[]> =>
@@ -144,4 +150,4 @@ export const mainApi = {
   },
 } as const
 
-export type TypeFlowApi = typeof mainApi
+export type DictateFlowApi = typeof mainApi

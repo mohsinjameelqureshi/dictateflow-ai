@@ -35,7 +35,7 @@ import {
   type TransferResult,
 } from '../../shared/types.js'
 import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
-import { listAudioInputs, receiveAudioInputs } from '../audio/devices.js'
+import { listAudioInputs, onAudioInputsChanged, receiveAudioInputs } from '../audio/devices.js'
 import { clearRecordings, recordingsSize } from '../audio/store.js'
 import { session } from '../dictation/session.js'
 import { readSettings, writeSetting } from '../settings.js'
@@ -129,6 +129,10 @@ export function registerIpcHandlers(): void {
       receiveAudioInputs(requestId, devices)
     },
   )
+
+  handle(IPC.widgetDevicesChanged, (devices: AudioInputDevice[]) => {
+    onAudioInputsChanged(devices)
+  })
 
   /* ------------------------------------------------------ dictations ---- */
 

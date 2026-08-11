@@ -73,7 +73,7 @@ function multipart(wav, boundary) {
 
 function transcribe(wav, { reuse }) {
   return new Promise((resolve) => {
-    const boundary = `----typeflow${Math.random().toString(16).slice(2)}`
+    const boundary = `----dictateflow${Math.random().toString(16).slice(2)}`
     const body = multipart(wav, boundary)
 
     const started = performance.now()

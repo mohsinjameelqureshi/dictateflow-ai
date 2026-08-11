@@ -26,7 +26,7 @@ export function DictionaryPage() {
 
   const load = useCallback(async () => {
     try {
-      setEntries(await window.typeflow.dictionary.list())
+      setEntries(await window.dictateflow.dictionary.list())
     } catch {
       setProblem('Could not read your dictionary.')
     } finally {
@@ -40,7 +40,7 @@ export function DictionaryPage() {
 
   // A dictation bumps hit counts, so the same event History listens to keeps
   // the counts here honest.
-  useEffect(() => window.typeflow.dictations.onChanged(() => void load()), [load])
+  useEffect(() => window.dictateflow.dictations.onChanged(() => void load()), [load])
 
   const add = async () => {
     // Checked here as well as in the main process, against the same shared
@@ -51,7 +51,7 @@ export function DictionaryPage() {
       return
     }
 
-    const result = await window.typeflow.dictionary.create({ from, to })
+    const result = await window.dictateflow.dictionary.create({ from, to })
     if (!result.ok) {
       setProblem(result.problem)
       return
@@ -64,7 +64,7 @@ export function DictionaryPage() {
   }
 
   const save = async (id: number, nextFrom: string, nextTo: string): Promise<string | null> => {
-    const result = await window.typeflow.dictionary.update(id, { from: nextFrom, to: nextTo })
+    const result = await window.dictateflow.dictionary.update(id, { from: nextFrom, to: nextTo })
     if (!result.ok) return result.problem
     await load()
     return null
@@ -73,7 +73,7 @@ export function DictionaryPage() {
   const remove = (id: number) => {
     const previous = entries
     setEntries((prev) => prev.filter((e) => e.id !== id))
-    void window.typeflow.dictionary.remove(id).catch(() => {
+    void window.dictateflow.dictionary.remove(id).catch(() => {
       setEntries(previous)
       setProblem('Could not delete that rule.')
     })

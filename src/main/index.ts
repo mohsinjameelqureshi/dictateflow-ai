@@ -11,6 +11,7 @@ import { startShortcut, stopShortcut } from './shortcut/index.js'
 import { createTray } from './tray.js'
 import { createMainWindow } from './windows/main-window.js'
 import { createWidgetWindow, getWidgetWindow } from './windows/widget-window.js'
+import { migrateUserData } from './migrate-user-data.js'
 
 // Single instance: a second launch should focus the existing window, not
 // open a second one holding the same SQLite file — or install a second
@@ -34,7 +35,7 @@ if (!app.requestSingleInstanceLock()) {
   // Must match `appId` in electron-builder.yml. Windows keys the taskbar
   // button — and the icon it shows — off this, not off the window. Without it
   // the app groups under the generic Electron entry in dev.
-  app.setAppUserModelId('com.mjq.typeflow-ai')
+  app.setAppUserModelId('com.mjq.dictateflow-ai')
 
   app.whenReady().then(() => {
     // Renderer runs no remote content, so lock the CSP down. Vite's dev
@@ -58,7 +59,7 @@ if (!app.requestSingleInstanceLock()) {
                 // Nothing remote is ever loaded — the Groq call happens in the
                 // main process, which is why connect-src stays at 'self'.
                 //
-                // `media-src typeflow-audio:` is what lets history play a
+                // `media-src dictateflow-audio:` is what lets history play a
                 // recording (§6.8). It is deliberately narrower than adding
                 // file: — the scheme resolves an ID through the database, so
                 // the renderer cannot name a path.
@@ -84,6 +85,7 @@ if (!app.requestSingleInstanceLock()) {
       permission === 'media' && !!wc && isWidget(wc),
     )
 
+    migrateUserData()
     initDb()
     // After initDb — the handler resolves a dictation id through the database,
     // so there must be a database to resolve it against.

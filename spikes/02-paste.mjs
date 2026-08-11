@@ -18,7 +18,7 @@ import { clipboard, keyboard, Key, getActiveWindow, sleep } from '@nut-tree-fork
 // single dictation. Non-obvious, and it matters at our latency budget.
 keyboard.config.autoDelayMs = 0
 
-const TEXT = 'Hello from TypeFlow spike 2 — ünïcödé and 🎤 included.'
+const TEXT = 'Hello from DictateFlow spike 2 — ünïcödé and 🎤 included.'
 const SENTINEL = `clipboard-sentinel-${Date.now()}`
 const RESTORE_DELAY_MS = 150
 

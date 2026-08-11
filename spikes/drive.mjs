@@ -14,7 +14,7 @@ import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const FIX = path.join(os.tmpdir(), 'typeflow-spike-fixtures')
+const FIX = path.join(os.tmpdir(), 'dictateflow-spike-fixtures')
 
 /** Chromium's fake capture wants 48k stereo; it resamples down for us. */
 function writeWav(file, seconds, fill) {

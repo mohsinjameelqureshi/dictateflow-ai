@@ -66,14 +66,14 @@ function probeElevated(hwnd: number | null): Promise<boolean> {
 $sig = @"
 using System;
 using System.Runtime.InteropServices;
-public static class TypeFlowWin {
+public static class DictateFlowWin {
   [DllImport("user32.dll", SetLastError=true)]
   public static extern int GetWindowThreadProcessId(IntPtr hWnd, out int pid);
 }
 "@
 Add-Type -TypeDefinition $sig
 $target = 0
-[void][TypeFlowWin]::GetWindowThreadProcessId([IntPtr]${hwnd}, [ref]$target)
+[void][DictateFlowWin]::GetWindowThreadProcessId([IntPtr]${hwnd}, [ref]$target)
 if ($target -eq 0) { 'UNKNOWN'; exit 0 }
 $path = $null
 try { $path = (Get-Process -Id $target -ErrorAction Stop).MainModule.FileName } catch { }

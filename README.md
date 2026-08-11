@@ -1,4 +1,4 @@
-# TypeFlow AI
+# DictateFlow AI
 
 **Local-first desktop dictation for Windows.** Hold `Ctrl` + `Win` (the
 default, rebindable to anything), speak, release. The text appears in whatever
@@ -22,7 +22,7 @@ transcribed by Whisper. That is the entire network surface.
 
 What never leaves:
 
-- your transcripts and history: SQLite, `%APPDATA%\typeflow-ai`
+- your transcripts and history: SQLite, `%APPDATA%\dictateflow-ai`
 - your recordings: WAV files in the same folder
 - your settings and personal dictionary
 - your Groq API key, encrypted at rest with Windows DPAPI via Electron's
@@ -34,7 +34,7 @@ There is no telemetry, no analytics, and no crash reporting.
 
 ## Install
 
-Download `typeflow-ai.exe` from the
+Download `dictateflow-ai.exe` from the
 [Releases](../../releases) page and run it. It installs per-user and does not
 ask for administrator rights.
 
@@ -65,7 +65,7 @@ of the API. You talk to Groq directly with your own credentials.
 1. Sign up at [console.groq.com](https://console.groq.com). Free tier, no
    card required.
 2. Create an API key. It starts with `gsk_`.
-3. In TypeFlow AI, open **Settings → Transcription** and paste it.
+3. In DictateFlow AI, open **Settings → API** and paste it.
 
 The key is encrypted immediately and written to `groq-key.bin` in the app's
 data folder. Copying that file to another machine gets you nothing: DPAPI ties
@@ -141,11 +141,11 @@ Requires Node 20+ and the Windows build tools that native modules need
 (Visual Studio Build Tools with the C++ workload).
 
 ```bash
-git clone https://github.com/mohsinjameelqureshi/typeflow-ai.git
-cd typeflow-ai
+git clone https://github.com/mohsinjameelqureshi/dictateflow-ai.git
+cd dictateflow-ai
 npm install          # postinstall runs electron-rebuild, do not skip it
 npm run dev          # development, with hot reload
-npm run dist         # produces release/typeflow-ai.exe
+npm run dist         # produces release/dictateflow-ai.exe
 ```
 
 `better-sqlite3` and `uiohook-napi` are native modules and must be compiled
@@ -182,7 +182,7 @@ Key released   →  silence/amplitude gate →  Groq Whisper large-v3-turbo
 - **Insertion is via the clipboard**, not simulated typing. Typing character
   by character is visibly slow on long text and mangles non-ASCII and emoji.
   Your clipboard contents are restored afterwards.
-- **Audio playback** goes through a custom `typeflow-audio://` protocol that
+- **Audio playback** goes through a custom `dictateflow-audio://` protocol that
   resolves files in the main process from a dictation id. The renderer can
   never name a path.
 - **Speech providers are behind an interface** (`src/services/speech/types.ts`)

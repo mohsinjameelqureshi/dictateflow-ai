@@ -14,7 +14,7 @@ reasonable window before public disclosure.
 
 ## What this app actually does
 
-Worth knowing before assessing it. TypeFlow AI:
+Worth knowing before assessing it. DictateFlow AI:
 
 - installs a **global keyboard hook** (`uiohook-napi`) that observes every
   keystroke system-wide, in order to detect the hold-to-talk shortcut
@@ -43,7 +43,7 @@ keeps `connect-src` at `'self'` in production — the Groq call happens in the
 main process.
 
 **Audio playback cannot be used to read arbitrary files.** The
-`typeflow-audio://` handler takes a dictation id, not a path. It looks the
+`dictateflow-audio://` handler takes a dictation id, not a path. It looks the
 row up in the database, takes `path.basename` of the stored filename, joins it
 to the recordings directory, and verifies the result is still inside that
 directory. Both the basename and the prefix check are required; either alone

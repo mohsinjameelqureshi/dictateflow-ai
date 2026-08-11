@@ -1,6 +1,6 @@
 ---
 name: phase-0-spikes
-description: Run and evaluate the three Phase 0 gating spikes for TypeFlow AI (uiohook-napi key up/down, nut.js clipboard paste without focus loss, 16kHz mono WAV capture). Use when starting Phase 0, when a spike fails, or before declaring the Phase 0 gate passed and moving to Phase 1.
+description: Run and evaluate the three Phase 0 gating spikes for DictateFlow AI (uiohook-napi key up/down, nut.js clipboard paste without focus loss, 16kHz mono WAV capture). Use when starting Phase 0, when a spike fails, or before declaring the Phase 0 gate passed and moving to Phase 1.
 ---
 
 # Phase 0 spikes

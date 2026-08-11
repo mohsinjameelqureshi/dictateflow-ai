@@ -62,12 +62,12 @@ export interface RecordingsStats {
  * canonicalises the host as a hostname, and an all-numeric host becomes an
  * IPv4 address:
  *
- *     typeflow-audio://123      ->  typeflow-audio://0.0.0.123/
- *     typeflow-audio://clip/123 ->  unchanged
+ *     dictateflow-audio://123      ->  dictateflow-audio://0.0.0.123/
+ *     dictateflow-audio://clip/123 ->  unchanged
  *
  * The id therefore lives in the PATH. Never move it back to the host.
  */
-export const AUDIO_SCHEME = 'typeflow-audio'
+export const AUDIO_SCHEME = 'dictateflow-audio'
 export const AUDIO_HOST = 'clip'
 
 export function audioUrl(dictationId: number): string {
@@ -98,7 +98,7 @@ export interface DictationDto {
   favorite: boolean
   /**
    * Whether a recording exists for this row (§8). Deliberately a boolean and
-   * not the filename: the renderer plays `typeflow-audio://<id>` and never names
+   * not the filename: the renderer plays `dictateflow-audio://<id>` and never names
    * a file, so handing it one would only be an invitation.
    *
    * False for every row written before Phase 6 — those render a disabled
@@ -157,7 +157,7 @@ export function isThemeChoice(value: string): value is ThemeChoice {
  * The API key is absent too — safeStorage only, never JSON (§2).
  */
 export const BACKUP_FORMAT = 1
-export const BACKUP_APP = 'typeflow-ai'
+export const BACKUP_APP = 'dictateflow-ai'
 
 /**
  * The app id this file was written under before the project was renamed. Only
@@ -165,7 +165,7 @@ export const BACKUP_APP = 'typeflow-ai'
  * has to keep importing tomorrow, or the export feature quietly broke the one
  * promise it makes.
  */
-export const BACKUP_APP_LEGACY = 'wispr-ai'
+export const BACKUP_APP_LEGACY = ['wispr-ai', 'typeflow-ai'] as const
 
 export interface BackupDictation {
   rawText: string
@@ -342,7 +342,7 @@ export interface ApiKeyStatus {
 /* ----------------------------------------------------------- settings ---- */
 
 /** Tabs in the settings dialog's own rail. */
-export type SettingsTab = 'general' | 'transcription' | 'data' | 'experimental' | 'about'
+export type SettingsTab = 'general' | 'transcription' | 'api' | 'data' | 'experimental' | 'about'
 
 /**
  * A microphone, as offered to the picker. Enumerated by the widget renderer —
@@ -388,6 +388,7 @@ export interface IpcMap {
   'widget:clip': [ClipPayload, void]
   'widget:micError': [{ name: string; message: string }, void]
   'widget:devices': [{ requestId: number; devices: AudioInputDevice[] }, void]
+  'widget:devicesChanged': [AudioInputDevice[], void]
   'devices:list': [void, AudioInputDevice[]]
   'settings:open': [SettingsTab | undefined, void]
   'shortcut:suspend': [boolean, void]
@@ -416,6 +417,7 @@ export interface IpcEventMap {
    * moment it was rebound, with both windows visible at once.
    */
   'settings:changed': Settings
+  'devices:changed': void
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */

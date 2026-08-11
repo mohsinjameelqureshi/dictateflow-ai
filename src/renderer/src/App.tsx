@@ -16,7 +16,7 @@ import { TransformPage } from './features/transform/transform-page.js'
  * process and shared across windows. localStorage also reads synchronously,
  * so the rail does not render expanded and then snap narrow on first paint.
  */
-const SIDEBAR_KEY = 'typeflow.sidebarCollapsed'
+const SIDEBAR_KEY = 'dictateflow.sidebarCollapsed'
 
 /**
  * Plain state routing. There are four destinations and no URLs to preserve, so
@@ -33,14 +33,14 @@ export default function App() {
   const closeSettings = useSettingsDialog((s) => s.close)
 
   // `true` — the main window cross-fades theme changes; the widget does not.
-  useTheme(window.typeflow.theme, true)
-  useEffect(() => window.typeflow.app.onNavigate(setRoute), [])
+  useTheme(window.dictateflow.theme, true)
+  useEffect(() => window.dictateflow.app.onNavigate(setRoute), [])
   useEffect(() => localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'), [collapsed])
 
   // The tray asks for Settings by naming a tab. That both opens the dialog and
   // selects within it — the request is "show me this", and it arrives whether
   // or not Settings is already up.
-  useEffect(() => window.typeflow.settings.onNavigate(openSettings), [openSettings])
+  useEffect(() => window.dictateflow.settings.onNavigate(openSettings), [openSettings])
 
   // One toggle, two triggers: the title bar button and the sidebar's own edge.
   const toggleSidebar = useCallback(() => setCollapsed((c) => !c), [])

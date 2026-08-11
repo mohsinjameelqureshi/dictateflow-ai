@@ -16,10 +16,10 @@ import { AUDIO_MIME, resolveRecording } from './store.js'
  *
  * The URL carries a dictation ID and nothing else:
  *
- *     typeflow-audio://clip/123
+ *     dictateflow-audio://clip/123
  *
  * The filename comes from the DATABASE, never from the renderer. A renderer
- * that could name the file could name `../../typeflow.db` instead; here the worst
+ * that could name the file could name `../../dictateflow.db` instead; here the worst
  * a compromised renderer can do is ask for a row that does not exist.
  *
  * The `clip/` segment is load-bearing, not decoration — see the note on
@@ -77,7 +77,7 @@ export function registerAudioProtocol(): void {
 }
 
 /**
- * `typeflow-audio://clip/123` -> absolute path and size, or null.
+ * `dictateflow-audio://clip/123` -> absolute path and size, or null.
  *
  * The size comes from the same `stat` that proves the file exists, so serving
  * an honest Content-Length costs nothing extra. It is read from DISK rather

@@ -19,8 +19,8 @@ import { widgetApi } from './widget-api.js'
  */
 const isWidget = process.argv.includes(WIDGET_ROLE_ARG)
 
-if (isWidget) contextBridge.exposeInMainWorld('typeflowWidget', widgetApi)
-else contextBridge.exposeInMainWorld('typeflow', mainApi)
+if (isWidget) contextBridge.exposeInMainWorld('dictateflowWidget', widgetApi)
+else contextBridge.exposeInMainWorld('dictateflow', mainApi)
 
-export type { TypeFlowApi } from './main-api.js'
+export type { DictateFlowApi } from './main-api.js'
 export type { WidgetApi } from './widget-api.js'

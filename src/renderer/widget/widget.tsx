@@ -31,7 +31,7 @@ const TONE: Partial<Record<WidgetState, string>> = {
 }
 
 function Icon({ state }: { state: WidgetState }) {
-  const cls = 'size-4 shrink-0'
+  const cls = 'size-3.5 shrink-0'
   switch (state) {
     case 'listening':
       return <Mic className={`${cls} text-accent`} />
@@ -73,30 +73,42 @@ export function Widget() {
   // The widget floats over the user's own screen, so it follows the app's
   // theme like everything else — `getTheme`/`onTheme` rather than settings,
   // which this surface deliberately cannot reach.
-  useTheme(window.typeflowWidget.theme)
+  useTheme(window.dictateflowWidget.theme)
 
-  useEffect(() => window.typeflowWidget.onState(setPayload), [])
+  useEffect(() => window.dictateflowWidget.onState(setPayload), [])
 
   // Settings asks for the microphone list through here. Answering always —
   // even on failure — is what keeps the picker from sitting on a 5s timeout.
   useEffect(
     () =>
-      window.typeflowWidget.onEnumerate(({ requestId }) => {
+      window.dictateflowWidget.onEnumerate(({ requestId }) => {
         void listAudioInputs(!recorder.recording)
           .catch(() => [])
-          .then((devices) => window.typeflowWidget.sendDevices(requestId, devices))
+          .then((devices) => window.dictateflowWidget.sendDevices(requestId, devices))
       }),
     [recorder],
   )
 
+  // Unplugging an external mic should revert Settings to system default without
+  // waiting for the user to open the picker or hit Refresh.
+  useEffect(() => {
+    const onChange = () => {
+      void listAudioInputs(!recorder.recording)
+        .catch(() => [])
+        .then((devices) => window.dictateflowWidget.notifyDevicesChanged(devices))
+    }
+    navigator.mediaDevices.addEventListener('devicechange', onChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', onChange)
+  }, [recorder])
+
   useEffect(
     () =>
-      window.typeflowWidget.onCommand((command) => {
+      window.dictateflowWidget.onCommand((command) => {
         switch (command.type) {
           case 'start':
             void recorder.start(command.deviceId).catch((err: unknown) => {
               const e = err as Error
-              void window.typeflowWidget.reportMicError({
+              void window.dictateflowWidget.reportMicError({
                 name: e.name ?? 'Error',
                 message:
                   e.name === 'NotAllowedError'
@@ -108,7 +120,7 @@ export function Widget() {
             })
             return
           case 'stop':
-            void window.typeflowWidget.sendClip(recorder.stop())
+            void window.dictateflowWidget.sendClip(recorder.stop())
             return
           case 'cancel':
             recorder.cancel()
@@ -124,12 +136,14 @@ export function Widget() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center p-1">
+      {/* `w-fit`, not `w-full`: the pill must shrink to its content. Stretching
+          to the BrowserWindow made width changes look like they never applied. */}
       <div
         role="status"
         aria-live="polite"
         className={
-          'flex h-16 w-full items-center gap-3 rounded-full border border-line bg-panel/95 ' +
-          'px-5 shadow-lg backdrop-blur-sm transition-opacity duration-150 ' +
+          'flex h-10 w-fit max-w-full items-center gap-1.5 rounded-full border border-line bg-panel/95 ' +
+          'px-2.5 shadow-lg backdrop-blur-sm transition-opacity duration-150 ' +
           (state === 'cancelled' ? 'opacity-0' : 'opacity-100')
         }
       >
@@ -138,7 +152,7 @@ export function Widget() {
         {state === 'listening' ? (
           <Waveform recorder={recorder} />
         ) : (
-          <span className={`truncate text-sm font-medium ${TONE[state] ?? 'text-ink'}`}>
+          <span className={`truncate text-xs font-medium ${TONE[state] ?? 'text-ink'}`}>
             {label}
           </span>
         )}

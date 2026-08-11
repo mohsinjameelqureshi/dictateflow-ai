@@ -107,7 +107,7 @@ export function DictationCard({
   const playable = hasAudio && !failed
 
   const copy = () => {
-    void window.typeflow.clipboard.write(finalText).then(() => setCopied(true))
+    void window.dictateflow.clipboard.write(finalText).then(() => setCopied(true))
   }
 
   return (

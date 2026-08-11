@@ -46,7 +46,7 @@ export function ShortcutField({
     setPreview([])
     setProblem(null)
 
-    void window.typeflow.shortcut.suspend(true)
+    void window.dictateflow.shortcut.suspend(true)
 
     const commit = () => {
       // Activating "Change" with the keyboard fires the button on Enter's
@@ -117,7 +117,7 @@ export function ShortcutField({
       window.removeEventListener('blur', onBlur)
       // The matching `false`, guaranteed on every exit including unmount. A
       // stuck `true` disables dictation with no visible cause.
-      void window.typeflow.shortcut.suspend(false)
+      void window.dictateflow.shortcut.suspend(false)
     }
   }, [capturing])
 

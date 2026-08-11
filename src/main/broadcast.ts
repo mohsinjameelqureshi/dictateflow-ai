@@ -31,3 +31,13 @@ export function broadcastSettings(settings: Settings): void {
     }
   }
 }
+
+/** Microphones plugged or unplugged — refresh any open picker. */
+export function broadcastDevicesChanged(): void {
+  const widget = getWidgetWindow()
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win !== widget && !win.isDestroyed()) {
+      win.webContents.send(IPC_EVENT.devicesChanged)
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "name": "typeflow-ai",
+  "name": "dictateflow-ai",
   "version": "1.0.0",
-  "description": "Local-first desktop dictation for Windows",
+  "description": "DictateFlow AI — local-first desktop dictation for Windows",
   "main": "./out/main/index.js",
   "author": "Mohsin Jameel Qureshi",
   "license": "MIT",
@@ -18,7 +18,8 @@
     "db:generate": "drizzle-kit generate",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "screenshots": "python scripts/patch-screenshots.py"
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6",

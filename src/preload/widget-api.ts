@@ -50,6 +50,10 @@ export const widgetApi = {
   sendDevices: (requestId: number, devices: AudioInputDevice[]): Promise<void> =>
     ipcRenderer.invoke(IPC.widgetDevices, { requestId, devices }) as Promise<void>,
 
+  /** OS reported a mic plugged or unplugged — main reconciles the stored pick. */
+  notifyDevicesChanged: (devices: AudioInputDevice[]): Promise<void> =>
+    ipcRenderer.invoke(IPC.widgetDevicesChanged, devices) as Promise<void>,
+
   /**
    * The widget cannot read settings — its surface is deliberately mic-only
    * (§6.7) — so the resolved theme is handed to it rather than looked up.

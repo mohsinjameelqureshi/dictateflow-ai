@@ -36,7 +36,7 @@ import { applyTheme } from './theme.js'
  */
 
 function fileName(): string {
-  return `typeflow-backup-${localDayKey(new Date())}.json`
+  return `dictateflow-backup-${localDayKey(new Date())}.json`
 }
 
 /* ------------------------------------------------------------- export ---- */
@@ -121,12 +121,16 @@ function parseBackup(raw: string): BackupFile | string {
     return 'That file is not valid JSON.'
   }
 
-  if (!isObject(data)) return 'That file does not look like a TypeFlow AI backup.'
-  if (data['app'] !== BACKUP_APP && data['app'] !== BACKUP_APP_LEGACY) {
-    return 'That file was not exported by TypeFlow AI.'
+  if (!isObject(data)) return 'That file does not look like a DictateFlow AI backup.'
+  const appId = data['app']
+  if (
+    appId !== BACKUP_APP &&
+    !(typeof appId === 'string' && (BACKUP_APP_LEGACY as readonly string[]).includes(appId))
+  ) {
+    return 'That file was not exported by DictateFlow AI.'
   }
   if (num(data['format']) > BACKUP_FORMAT) {
-    return 'That backup came from a newer version of TypeFlow AI.'
+    return 'That backup came from a newer version of DictateFlow AI.'
   }
 
   const dictations: BackupDictation[] = (

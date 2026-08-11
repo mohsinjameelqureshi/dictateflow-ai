@@ -2,6 +2,7 @@ import {
   Database,
   FlaskConical,
   Info,
+  Key,
   Mic,
   SlidersHorizontal,
   TriangleAlert,
@@ -11,6 +12,7 @@ import { Dialog } from '@/components/ui/dialog.js'
 import { cn } from '@/lib/utils.js'
 import type { SettingsTab } from '@shared/types.js'
 import { AboutTab } from './about-tab.js'
+import { ApiTab } from './api-tab.js'
 import { DataTab } from './data-tab.js'
 import { ExperimentalTab } from './experimental-tab.js'
 import { GeneralTab } from './general-tab.js'
@@ -35,6 +37,7 @@ import { useSettings } from './use-settings.js'
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'transcription', label: 'Transcription', icon: Mic },
+  { id: 'api', label: 'API', icon: Key },
   { id: 'data', label: 'Data', icon: Database },
   // Last before About, because nothing here is load-bearing and the rail reads
   // top to bottom in order of how settled a thing is.
@@ -96,6 +99,7 @@ export function SettingsDialog({
 
           {tab === 'general' && <GeneralTab {...store} />}
           {tab === 'transcription' && <TranscriptionTab {...store} />}
+          {tab === 'api' && <ApiTab />}
           {tab === 'data' && <DataTab {...store} />}
           {tab === 'experimental' && <ExperimentalTab {...store} />}
           {tab === 'about' && <AboutTab />}

@@ -1,14 +1,14 @@
-appId: com.mjq.typeflow-ai
-productName: TypeFlow AI
-# A fixed, lowercase, space-free filename. productName ("TypeFlow AI") is what
+appId: com.mjq.dictateflow-ai
+productName: DictateFlow AI
+# A fixed, lowercase, space-free filename. productName ("DictateFlow AI") is what
 # users see in the Start menu and the window title; this is only what the
 # downloaded file is called, and a name with no spaces survives being passed
 # around shells, URLs and scripts intact.
 #
 # Deliberately carries no version: the GitHub release tag identifies it. The
 # cost is that two downloads collide in a Downloads folder — switch to
-# typeflow-ai-${version}.${ext} if that ever bites.
-artifactName: typeflow-ai.${ext}
+# dictateflow-ai-${version}.${ext} if that ever bites.
+artifactName: dictateflow-ai.${ext}
 directories:
   buildResources: build
   output: release
@@ -45,7 +45,7 @@ nsis:
   perMachine: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: TypeFlow AI
+  shortcutName: DictateFlow AI
   # This is the electron-builder default, but it is stated explicitly because
   # the cost of it ever flipping is the user's entire dictation history and
   # every recording deleted by an uninstall they expected to be reversible.

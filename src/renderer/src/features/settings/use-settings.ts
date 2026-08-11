@@ -27,10 +27,11 @@ export function useSettings(): SettingsStore {
   }, [settings])
 
   useEffect(() => {
-    void window.typeflow.settings
+    void window.dictateflow.settings
       .getAll()
       .then(setSettings)
       .catch(() => setError('Could not read your settings.'))
+    return window.dictateflow.settings.onChanged(setSettings)
   }, [])
 
   const save = useCallback(async (key: SettingKey, value: string) => {
@@ -39,7 +40,7 @@ export function useSettings(): SettingsStore {
     setSettings((s) => (s ? { ...s, [key]: value } : s))
 
     try {
-      await window.typeflow.settings.set(key, value)
+      await window.dictateflow.settings.set(key, value)
     } catch {
       setSettings((s) => (s ? { ...s, [key]: previous } : s))
       setError('That change could not be saved.')

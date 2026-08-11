@@ -1,4 +1,4 @@
-# TypeFlow AI 1.0.0
+# DictateFlow AI 1.0.0
 
 First public release. Windows 10 and 11, 64-bit.
 
@@ -28,7 +28,7 @@ No account, no login, no telemetry.
 
 ## Install
 
-1. Download `typeflow-ai.exe` below.
+1. Download `dictateflow-ai.exe` below.
 2. Run it. It installs per-user and does not ask for administrator rights.
 3. SmartScreen will warn you. See the next section.
 
@@ -39,7 +39,7 @@ front of the API.
 
 1. Get a key at [console.groq.com](https://console.groq.com). Free tier, no
    card required.
-2. Paste it into **Settings → Transcription**.
+2. Paste it into **Settings → API**.
 
 The key is encrypted with Windows DPAPI, tied to your Windows account, and
 stored outside the database. It never leaves your machine.
@@ -63,7 +63,7 @@ SHA256  94DDCDE76545B90D49A1617729C770ECDEA7D3C30BF5839DDEEE3C9773A8F65A
 ```
 
 ```powershell
-Get-FileHash .\typeflow-ai.exe -Algorithm SHA256
+Get-FileHash .\dictateflow-ai.exe -Algorithm SHA256
 ```
 
 Or build it yourself from source. It takes about five minutes.
@@ -84,6 +84,6 @@ Or build it yourself from source. It takes about five minutes.
 - **Windows only.** The keyboard hook, the insertion path and the packaging
   are all Windows-specific. No macOS or Linux build, and none planned.
 
-Full details in the [README](https://github.com/mohsinjameelqureshi/typeflow-ai#readme).
+Full details in the [README](https://github.com/mohsinjameelqureshi/dictateflow-ai#readme).
 
 MIT licensed.

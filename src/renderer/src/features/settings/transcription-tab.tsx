@@ -1,4 +1,3 @@
-import { ApiKeyCard } from "./api-key-card.js";
 import { Row, Section, Select } from "./parts.js";
 import type { SettingsStore } from "./use-settings.js";
 
@@ -28,8 +27,6 @@ const LANGUAGES: [code: string, label: string][] = [
 export function TranscriptionTab({ settings, save }: SettingsStore) {
   return (
     <div className="flex flex-col gap-4">
-      <ApiKeyCard />
-
       <Section title="Speech">
         <Row
           label="Provider"

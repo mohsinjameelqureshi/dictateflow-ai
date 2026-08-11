@@ -1,5 +1,7 @@
 import { IPC_EVENT } from '../../shared/ipc-channels.js'
 import type { AudioInputDevice } from '../../shared/types.js'
+import { broadcastDevicesChanged, broadcastSettings } from '../broadcast.js'
+import { readSetting, readSettings, writeSetting } from '../settings.js'
 import { getWidgetWindow, sendToWidget } from '../windows/widget-window.js'
 
 /**
@@ -21,6 +23,25 @@ let nextRequestId = 1
 /** Long enough for a cold `getUserMedia` label unlock, short enough to not hang. */
 const TIMEOUT_MS = 5000
 
+/**
+ * A stored device id that no longer appears in the list — unplugged, or Windows
+ * re-enumerated it under a new id. Fall back to system default and tell every
+ * open window, so the picker does not sit on a ghost entry.
+ */
+export function reconcileMicrophoneId(devices: AudioInputDevice[]): void {
+  const id = readSetting('microphoneId')
+  if (!id) return
+  if (devices.some((d) => d.deviceId === id)) return
+  writeSetting('microphoneId', '')
+  broadcastSettings(readSettings())
+}
+
+/** Widget reports the OS list changed. Reconcile the stored pick and refresh UIs. */
+export function onAudioInputsChanged(devices: AudioInputDevice[]): void {
+  reconcileMicrophoneId(devices)
+  broadcastDevicesChanged()
+}
+
 export function listAudioInputs(): Promise<AudioInputDevice[]> {
   if (!getWidgetWindow()) return Promise.resolve([])
 
@@ -39,6 +60,7 @@ export function listAudioInputs(): Promise<AudioInputDevice[]> {
 
 /** Called by the IPC handler when the widget answers. */
 export function receiveAudioInputs(requestId: number, devices: AudioInputDevice[]): void {
+  reconcileMicrophoneId(devices)
   const resolve = pending.get(requestId)
   if (!resolve) return // timed out already, or a duplicate reply
   pending.delete(requestId)

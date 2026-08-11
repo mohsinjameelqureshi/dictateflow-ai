@@ -30,8 +30,8 @@ export function HistoryPage() {
     const query = { search: term, favoritesOnly: favs, limit: take }
     try {
       const [rows, n] = await Promise.all([
-        window.typeflow.dictations.list(query),
-        window.typeflow.dictations.count(query),
+        window.dictateflow.dictations.list(query),
+        window.dictateflow.dictations.count(query),
       ])
       setItems(rows)
       setTotal(n)
@@ -53,13 +53,13 @@ export function HistoryPage() {
   // The capture loop writes from the main process, so the list has to be told
   // rather than polled.
   useEffect(
-    () => window.typeflow.dictations.onChanged(() => void load(search, favoritesOnly, limit)),
+    () => window.dictateflow.dictations.onChanged(() => void load(search, favoritesOnly, limit)),
     [load, search, favoritesOnly, limit],
   )
 
   const toggleFavorite = (id: number, favorite: boolean) => {
     setItems((prev) => prev.map((d) => (d.id === id ? { ...d, favorite } : d)))
-    void window.typeflow.dictations.setFavorite(id, favorite).catch(() => {
+    void window.dictateflow.dictations.setFavorite(id, favorite).catch(() => {
       setItems((prev) => prev.map((d) => (d.id === id ? { ...d, favorite: !favorite } : d)))
       setError('Could not update that.')
     })
@@ -69,7 +69,7 @@ export function HistoryPage() {
     const previous = items
     setItems((prev) => prev.filter((d) => d.id !== id))
     setTotal((n) => Math.max(0, n - 1))
-    void window.typeflow.dictations.remove(id).catch(() => {
+    void window.dictateflow.dictations.remove(id).catch(() => {
       setItems(previous)
       setTotal((n) => n + 1)
       setError('Could not delete that.')

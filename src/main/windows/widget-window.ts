@@ -18,8 +18,9 @@ import type { IpcEventMap } from '../../shared/types.js'
  * spikes/README.md comes from.
  */
 
-const WIDGET_W = 280
-const WIDGET_H = 76
+/** Sized to the compact pill + waveform, not the old 280px bar. */
+const WIDGET_W = 150
+const WIDGET_H = 52
 
 /** Gap from the work-area edge — NOT from the screen edge. That is the point. */
 const EDGE_GAP = 24

@@ -121,13 +121,13 @@ export function Sidebar({
           src={logo}
           // Decorative next to the wordmark; the accessible name when the
           // wordmark is not rendered.
-          alt={collapsed ? "TypeFlow AI" : ""}
+          alt={collapsed ? "DictateFlow AI" : ""}
           draggable={false}
           className="size-7 shrink-0"
         />
         {!collapsed && (
           <span className="truncate text-[15px] font-semibold tracking-tight text-ink">
-            TypeFlow AI
+            DictateFlow AI
           </span>
         )}
       </div>

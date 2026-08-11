@@ -34,7 +34,7 @@ function migrationsFolder(): string {
 export function initDb(): Db {
   if (db) return db
 
-  const file = join(app.getPath('userData'), 'typeflow.db')
+  const file = join(app.getPath('userData'), 'dictateflow.db')
   sqlite = new Database(file)
 
   // WAL keeps reads from blocking the write that happens right after every
