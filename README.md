@@ -7,6 +7,10 @@ application had focus: your editor, a browser field, Slack, anything.
 No account. No login. No cloud database. Your dictation history, statistics
 and recordings live in a SQLite file on your machine and never leave it.
 
+Transcription runs either in the cloud through Groq, or
+[entirely on your machine](#two-engines-cloud-or-local) with no key and no
+network at all. That choice is yours and you can change it at any time.
+
 ![The Dictation view: every session you have dictated, stored locally](docs/screenshots/dictation.png)
 
 > **Status:** v1.0.0, Windows x64 only. Built by one person for their own
@@ -15,12 +19,64 @@ and recordings live in a SQLite file on your machine and never leave it.
 
 ---
 
+## Two engines: cloud or local
+
+Transcription is the one part of this app that can involve someone else's
+computer, so it is a choice rather than an assumption. Pick either in the
+title bar or in **Settings → Transcription**, and switch whenever you like.
+
+|                          | **Groq** (cloud)              | **Moonshine** (local)             |
+| ------------------------ | ----------------------------- | --------------------------------- |
+| Where it runs            | Groq's servers                | your machine                      |
+| Audio leaves your computer | yes, the clip                | never                             |
+| Needs an API key         | yes, free                     | no                                |
+| Needs a connection       | every dictation               | once, to download the model       |
+| Languages                | around 99                     | English only                      |
+| One-time download        | none                          | 292 MB for Medium                 |
+| Speed                    | 1 to 2 seconds                | around half the length of the clip |
+
+**Groq** is the default and the faster of the two on short dictations. It
+sends your audio to Whisper large-v3-turbo and sends text back.
+
+**Moonshine** runs entirely on your machine, in a separate process, with no
+account and no key. Once the model is downloaded the app never contacts the
+network again: airplane mode changes nothing about how it behaves. The cost is
+a one-time download and slower transcription. Half real time means a 10 second
+dictation is roughly 5 seconds of local compute, against 1 to 2 seconds for
+the cloud. Longer clips close that gap.
+
+Three model sizes are available. Bigger is more accurate and slower:
+
+| Size   | Download | Word error rate | Notes                             |
+| ------ | -------- | --------------- | --------------------------------- |
+| Medium | 292 MB   | 6.65%           | default, beats Whisper large-v3   |
+| Small  | 159 MB   | 7.84%           | close to Medium, half the size    |
+| Tiny   | 51 MB    | 12.00%          | noticeably weaker on proper nouns |
+
+Selecting a model you do not have starts the download, and the title bar shows
+its progress. Models live in `%APPDATA%\dictateflow-ai\models` and survive app
+updates.
+
+Moonshine is **English only**, and that is a licensing boundary rather than a
+missing feature. Its English weights are MIT licensed; every other language is
+released under a non-commercial licence, so this app does not ship them. Your
+Groq language setting is kept untouched while you use Moonshine, so switching
+back restores it.
+
+---
+
 ## What actually leaves your computer
 
-One thing: **the audio clip**, sent to [Groq](https://groq.com) to be
-transcribed by Whisper. That is the entire network surface.
+That depends on the engine, and it is the only thing the choice changes.
 
-What never leaves:
+**With Moonshine, nothing does.** After the one-time model download the app
+makes no network requests at all.
+
+**With Groq, one thing does:** the audio clip, sent to
+[Groq](https://groq.com) to be transcribed by Whisper. That is the entire
+network surface.
+
+What never leaves, on either engine:
 
 - your transcripts and history: SQLite, `%APPDATA%\dictateflow-ai`
 - your recordings: WAV files in the same folder
@@ -59,8 +115,12 @@ minutes.
 
 ## Setup
 
-You need a free Groq API key. There is no bundled key and no server in front
-of the API. You talk to Groq directly with your own credentials.
+**Using Moonshine? There is no setup.** Open **Settings → Transcription**,
+choose Moonshine, wait for the model to download, and dictate. Skip the rest
+of this section.
+
+For Groq you need a free API key. There is no bundled key and no server in
+front of the API. You talk to Groq directly with your own credentials.
 
 1. Sign up at [console.groq.com](https://console.groq.com). Free tier, no
    card required.
@@ -80,6 +140,7 @@ it to your Windows user account.
 | Dictate                   | Hold your shortcut, speak, release              |
 | Cancel mid-sentence       | `Esc` while recording                           |
 | Change the shortcut       | Settings → General                              |
+| Switch cloud or local     | Title bar, or Settings → Transcription          |
 | Review or replay history  | Dictation tab, with audio for every session     |
 | Fix recurring misspellings| Dictionary tab, deterministic replacements      |
 
@@ -121,12 +182,17 @@ These are real and documented rather than hidden:
   input to a process running as administrator. This is Windows UIPI, not a
   bug. Dictating into an admin terminal shows "Can't type into this window"
   rather than pretending it worked.
-- **It needs a network connection.** Expect 1 to 2 seconds between releasing
+- **Groq needs a network connection.** Expect 1 to 2 seconds between releasing
   the key and text appearing. Roughly 95% of that is network round-trip and
-  free-tier queueing, not transcription.
+  free-tier queueing, not transcription. Moonshine has no such dependency, but
+  is slower per clip and English only.
 - **Grammar cleanup is off by default.** An LLM pass over Whisper's output
   measurably deletes words. It has to cut something to make ungrammatical
-  input read cleanly. The raw transcript is always stored and always shown.
+  input read cleanly. It ships in **Settings → Experimental**, guarded by a
+  detector that discards the result and keeps your raw transcript whenever a
+  word carrying meaning goes missing. Note that it is a Groq call regardless
+  of which engine transcribed, so turning it on while using Moonshine gives up
+  the offline guarantee for that step.
 - **Very short or very quiet clips are dropped.** Whisper hallucinates
   confident text out of silence ("Thank you."), so clips under 400ms or below
   an amplitude floor are rejected with "Didn't catch that".
@@ -169,7 +235,11 @@ Other scripts:
 ```
 Ctrl+Win held  →  uiohook-napi keydown  →  widget shown (never focused)
                                         →  16kHz mono WAV captured
-Key released   →  silence/amplitude gate →  Groq Whisper large-v3-turbo
+
+Key released   →  silence/amplitude gate
+                        ├─ Groq       →  Whisper large-v3-turbo, over the network
+                        └─ Moonshine  →  ONNX in a utilityProcess, on this machine
+                                        →  grammar cleanup, if you turned it on
                                         →  personal dictionary replacement
                                         →  clipboard save → paste → restore
                                         →  row + WAV written to SQLite
@@ -186,8 +256,14 @@ Key released   →  silence/amplitude gate →  Groq Whisper large-v3-turbo
   resolves files in the main process from a dictation id. The renderer can
   never name a path.
 - **Speech providers are behind an interface** (`src/services/speech/types.ts`)
-  with one implementation. Swapping Groq for a local whisper.cpp or another
-  API is meant to be a small change.
+  with two implementations, `groq.ts` and `moonshine.ts`. Everything above that
+  boundary is engine-agnostic: switching is a one-line change in the factory,
+  and the capture loop does not know which one it is talking to.
+- **The local engine runs in its own process.** A batch pass is seconds of
+  solid CPU, so it is forked into an Electron `utilityProcess` rather than run
+  in main, where it would stall the keyboard hook and the tray, or in a
+  renderer, which would mean weakening the sandbox and the CSP to allow WASM
+  and a CDN. Renderers are untouched by it. The model heap lives in the child.
 
 [`CLAUDE.md`](CLAUDE.md) is the real build specification: measured latency
 numbers, the constraints that silently break Electron dictation apps, and why
