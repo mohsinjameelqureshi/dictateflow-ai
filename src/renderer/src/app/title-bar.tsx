@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { Tooltip } from '@/components/ui/tooltip.js'
 import { useResolvedTheme } from '@/lib/theme.js'
 import { cn } from '@/lib/utils.js'
+import { TitleBarDownload } from './title-bar-download.js'
 import { TitleBarMic } from './title-bar-mic.js'
+import { TitleBarModel } from './title-bar-model.js'
 
 const GITHUB_URL = 'https://github.com/mohsinjameelqureshi/dictateflow-ai'
 
@@ -105,6 +107,11 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
 
       <div className="no-drag flex h-full items-center">
         <div className="mr-1 flex items-center gap-0.5">
+          {/* Only present while a model is downloading, so it sits left of the
+              engine it belongs to and nothing shifts once it leaves. */}
+          <TitleBarDownload />
+          {/* Engine then microphone: what transcribes, then what listens. */}
+          <TitleBarModel />
           <TitleBarMic />
           <Tooltip label="Star on GitHub">
             <a

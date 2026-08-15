@@ -19,7 +19,39 @@ spikes/node_modules/
 # No audio in this repo, ever. `source-*.wav` are recordings of a real human
 # voice, and the rest are derived from them — see bench/make-fixtures.mjs.
 # Supply your own two sources locally; they are yours and they stay local.
+# Broadened past bench/: a clip pasted anywhere in the tree is the same
+# recording of the same person, and the rule should not depend on where it
+# lands.
 bench/fixtures/*.wav
+*.wav
+*.mp3
+*.m4a
+*.webm
+
+# The API key lives in safeStorage, never in the repo (§2) — but the Phase 0
+# scripts read one from a .env, and a real key committed once is a key that
+# has to be rotated. Ignore the file rather than trusting the habit.
+.env
+.env.*
+!.env.example
+
+# The user's own dictation history. `dictateflow.db` normally lives in
+# userData and never comes near this directory, but a copy dragged here for
+# debugging would carry every transcript they have ever spoken.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+recordings/
+
+# Third-party skills installed into the repo by a skills manager, plus its
+# lockfile. Vendored someone else's documentation, not this project's — the
+# four skills in .claude/skills/ that ARE committed (groq-bench,
+# insert-pipeline, phase-0-spikes, widget-constraints) are the project's own.
+.agents/
+skills-lock.json
+.claude/skills/*-with-strix/
 
 # Internal working plan for the open source release. Kept on disk, not
 # published — visitors want README and CLAUDE.md, not a personal checklist.

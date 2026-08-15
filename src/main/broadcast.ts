@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { IPC_EVENT } from '../shared/ipc-channels.js'
-import type { Settings } from '../shared/types.js'
+import type { MoonshineProgress, MoonshineStatus, Settings } from '../shared/types.js'
 import { getWidgetWindow } from './windows/widget-window.js'
 
 /**
@@ -38,6 +38,30 @@ export function broadcastDevicesChanged(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (win !== widget && !win.isDestroyed()) {
       win.webContents.send(IPC_EVENT.devicesChanged)
+    }
+  }
+}
+
+/**
+ * Local model download progress. Fires often — once per streamed chunk — so it
+ * is deliberately the smallest payload in this file and skips the widget,
+ * which has nothing to show for it.
+ */
+export function broadcastMoonshineProgress(progress: MoonshineProgress): void {
+  const widget = getWidgetWindow()
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win !== widget && !win.isDestroyed()) {
+      win.webContents.send(IPC_EVENT.moonshineProgress, progress)
+    }
+  }
+}
+
+/** The local model became ready, failed, or was removed. */
+export function broadcastMoonshineStatus(status: MoonshineStatus): void {
+  const widget = getWidgetWindow()
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win !== widget && !win.isDestroyed()) {
+      win.webContents.send(IPC_EVENT.moonshineStatusChanged, status)
     }
   }
 }

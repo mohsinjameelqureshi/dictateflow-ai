@@ -99,7 +99,7 @@ export function SettingsDialog({
 
           {tab === 'general' && <GeneralTab {...store} />}
           {tab === 'transcription' && <TranscriptionTab {...store} />}
-          {tab === 'api' && <ApiTab />}
+          {tab === 'api' && <ApiTab {...store} />}
           {tab === 'data' && <DataTab {...store} />}
           {tab === 'experimental' && <ExperimentalTab {...store} />}
           {tab === 'about' && <AboutTab />}

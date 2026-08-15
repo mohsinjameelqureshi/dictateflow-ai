@@ -23,6 +23,10 @@ asarUnpack:
   # Native .node binaries cannot be loaded from inside an asar archive.
   - "**/*.node"
   - node_modules/better-sqlite3/**
+  # The Moonshine binding is ESM and is loaded with a dynamic import() from the
+  # utilityProcess. Node's ESM loader does not understand asar paths, so the
+  # package — including its 12.9MB .wasm — has to sit on the real filesystem.
+  - node_modules/@moonshine-ai/**
 extraResources:
   # The tray and the window icons load this at runtime by path. buildResources
   # is excluded from the app package, and reading an image out of the asar is

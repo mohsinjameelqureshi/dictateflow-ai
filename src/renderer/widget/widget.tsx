@@ -17,7 +17,7 @@ const COPY: Partial<Record<WidgetState, string>> = {
   success: 'Inserted',
   'no-speech': "Didn't catch that",
   offline: 'No connection',
-  'rate-limited': 'Rate limited — try again',
+  'rate-limited': 'Rate limited. Try again',
   blocked: "Can't type into this window",
 }
 
@@ -124,9 +124,6 @@ export function Widget() {
             return
           case 'cancel':
             recorder.cancel()
-            return
-          case 'prepare':
-            void recorder.prepare(command.deviceId)
         }
       }),
     [recorder],

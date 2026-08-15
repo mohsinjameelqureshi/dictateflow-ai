@@ -72,6 +72,13 @@ export const IPC = {
   /** widget -> main: the OS device list changed (plug/unplug). */
   widgetDevicesChanged: 'widget:devicesChanged',
 
+  /* the local engine's model on disk. Inference itself never crosses IPC —
+     it lives in a utilityProcess and is reached through the speech provider. */
+  moonshineStatus: 'moonshine:status',
+  moonshineDownload: 'moonshine:download',
+  moonshineCancel: 'moonshine:cancel',
+  moonshineDelete: 'moonshine:delete',
+
   /* diagnostics */
   appInfo: 'app:info',
 } as const
@@ -99,6 +106,12 @@ export const IPC_EVENT = {
   settingsChanged: 'settings:changed',
   /** main -> main window: microphones plugged or unplugged */
   devicesChanged: 'devices:changed',
+  /** main -> main window: bytes fetched so far for the local model */
+  moonshineProgress: 'moonshine:progress',
+  /** main -> main window: the local model became ready, failed or was removed.
+      Deliberately NOT 'moonshine:status' — that name is an invoke channel, and
+      one string serving both an `handle` and a `send` is a debugging trap. */
+  moonshineStatusChanged: 'moonshine:statusChanged',
 } as const
 
 /**

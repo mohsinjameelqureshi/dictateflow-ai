@@ -24,6 +24,7 @@ export class GroqSpeechProvider implements SpeechProvider {
   readonly id = 'groq'
   readonly label = 'Groq · Whisper Large v3 Turbo'
   readonly requiresNetwork = true
+  readonly acceptsVocabularyHint = true
 
   #client: Groq
   #apiKey: string
@@ -90,7 +91,7 @@ function classify(err: unknown): SpeechError {
     return new SpeechError('cancelled', 'Cancelled.', err)
   }
   if (err instanceof RateLimitError) {
-    return new SpeechError('rate-limited', 'Rate limited — try again.', err)
+    return new SpeechError('rate-limited', 'Rate limited. Try again.', err)
   }
   if (err instanceof AuthenticationError) {
     return new SpeechError('unauthorized', 'Groq rejected the API key.', err)

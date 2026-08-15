@@ -10,7 +10,13 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        input: { index: resolve('src/main/index.ts') },
+        input: {
+          index: resolve('src/main/index.ts'),
+          // A second entry, not a chunk of the first. It is forked as its own
+          // utilityProcess so that a batch pass — roughly 0.5x real time, so
+          // seconds of solid CPU — cannot stall the global hook or the tray.
+          'moonshine-worker': resolve('src/main/moonshine/worker.ts'),
+        },
       },
     },
     resolve: {

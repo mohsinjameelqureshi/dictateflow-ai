@@ -151,10 +151,6 @@ export class Recorder {
   #ctx: AudioContext | null = null
   #workletReady: Promise<void> | null = null
   #stream: MediaStream | null = null
-  /** Warm capture stream kept open between dictations for a chosen device. */
-  #heldStream: MediaStream | null = null
-  #heldDeviceId: string | null = null
-  #lastDeviceId = ''
   /** Bumped on cancel so a late start() cannot begin recording. */
   #startGen = 0
   #node: AudioWorkletNode | null = null
@@ -217,57 +213,20 @@ export class Recorder {
     return this.#workletReady
   }
 
-  /**
-   * Open the capture stream while idle so key-down skips getUserMedia.
-   * Only used for an explicit device pick — the system default is fast enough.
-   */
-  async prepare(deviceId: string): Promise<void> {
-    if (this.#recording) return
-
-    if (!deviceId) {
-      this.#releaseHeldStream()
-      return
-    }
-
-    if (this.#heldDeviceId === deviceId && this.#heldStream?.active) return
-
-    this.#releaseHeldStream()
-    await this.warm()
-
-    try {
-      this.#heldStream = await openStream(deviceId)
-      this.#heldDeviceId = deviceId
-    } catch {
-      this.#releaseHeldStream()
-    }
-  }
-
-  #releaseHeldStream(): void {
-    this.#heldStream?.getTracks().forEach((t) => t.stop())
-    this.#heldStream = null
-    this.#heldDeviceId = null
-  }
-
   async start(deviceId: string): Promise<void> {
     const gen = ++this.#startGen
     this.#frames = []
     this.#peak = 0
-    this.#lastDeviceId = deviceId
 
     await this.warm()
     const ctx = this.#ctx
     if (!ctx) throw new Error('AudioContext unavailable')
     if (ctx.state === 'suspended') await ctx.resume()
 
-    let stream: MediaStream
-    if (deviceId && this.#heldDeviceId === deviceId && this.#heldStream) {
-      stream = this.#heldStream
-      this.#heldStream = null
-      this.#heldDeviceId = null
-    } else {
-      this.#releaseHeldStream()
-      stream = await openStream(deviceId)
-    }
+    // Opened per dictation. §11 already covers the cost: the widget appears on
+    // key-down, before the mic is ready, so the user has feedback while an
+    // external device takes its 200–500ms to come up.
+    const stream = await openStream(deviceId)
 
     if (gen !== this.#startGen) {
       stream.getTracks().forEach((t) => t.stop())
@@ -382,7 +341,7 @@ export class Recorder {
   }
 
   /** Tear down the graph and release the mic, keeping the context warm. */
-  #teardown(keepStream = false): number {
+  #teardown(): number {
     // A stop can arrive before start() ever resolved — a mic error, or a tap
     // so short the graph never came up. Report 0 rather than the time since
     // the epoch, which would sail past the §6.6 duration guard.
@@ -393,14 +352,14 @@ export class Recorder {
     this.#source?.disconnect()
     this.#node?.disconnect()
 
-    if (keepStream && this.#stream && this.#lastDeviceId) {
-      this.#heldStream = this.#stream
-      this.#heldDeviceId = this.#lastDeviceId
-    } else {
-      this.#stream?.getTracks().forEach((t) => t.stop())
-      this.#heldStream = null
-      this.#heldDeviceId = null
-    }
+    // Released, never held. Keeping a chosen device open between dictations
+    // saved a few hundred ms on the next start, but the OS cannot tell an idle
+    // open stream from a live one: Windows lights the recording indicator and
+    // the microphone's own LED comes on and stays on. For a dictation app that
+    // reads as always listening, which is the one impression it cannot afford
+    // to give — and it is the same reasoning already applied to the meter
+    // stream below.
+    this.#stream?.getTracks().forEach((t) => t.stop())
 
     this.#source = null
     this.#node = null
@@ -426,8 +385,7 @@ export class Recorder {
   }
 
   stop(): ClipPayload {
-    const keepStream = !!this.#lastDeviceId
-    const durationMs = this.#teardown(keepStream)
+    const durationMs = this.#teardown()
     const sampleRate = this.#ctx?.sampleRate ?? TARGET_RATE
     const samples = this.#frames.reduce((n, f) => n + f.length, 0)
     const bytes = encodeWav(this.#frames, sampleRate)
@@ -442,7 +400,7 @@ export class Recorder {
   /** Esc — drop the buffer without encoding it. */
   cancel(): void {
     this.#startGen += 1
-    this.#teardown(!!this.#lastDeviceId)
+    this.#teardown()
     this.#frames = []
     this.#peak = 0
   }

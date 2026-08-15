@@ -16,6 +16,7 @@ import {
   stripVocabularyHint,
   type DictionaryRule,
 } from '../../services/enhance/dictionary.js'
+import { enhanceText, type EnhanceResult } from '../../services/enhance/index.js'
 import { writeRecording, type WrittenRecording } from '../audio/store.js'
 import { broadcastDictationsChanged } from '../broadcast.js'
 import { insertText, pressEnter } from '../insert/clipboard.js'
@@ -184,7 +185,10 @@ class DictationSession {
     let providerId: string
     try {
       const provider = getSpeechProvider(settings.speechProvider ?? 'groq', getApiKey())
-      const hint = buildVocabularyHint(rules)
+      // Only built for a provider that actually consumes it. The local engine
+      // ignores the hint and biases its decoder instead (Phase 4), so handing
+      // it one would mean stripping a leak that could never have happened.
+      const hint = provider.acceptsVocabularyHint ? buildVocabularyHint(rules) : undefined
       const result = await provider.transcribe(Buffer.from(clip.bytes), {
         language: settings.language ?? 'en',
         ...(hint ? { vocabularyHint: hint } : {}),
@@ -215,9 +219,37 @@ class DictationSession {
       return
     }
 
-    // §9 — dictionary runs after transcription (and would run after the LLM
-    // step, if the LLM step were enabled; §4 keeps it off by default).
-    const replaced = applyDictionary(rawText, rules)
+    // §4 — grammar cleanup. Off unless the user turned it on in Experimental,
+    // and skipped without a key: this is a Groq round trip no matter which
+    // engine produced the transcript, so a Moonshine user who enables it is
+    // choosing to give up the offline guarantee for this step.
+    //
+    // It cannot fail the dictation. `enhanceText` returns the raw transcript
+    // on a dropped word, a dead network, a 429 or a refusal — the text already
+    // exists and a cleanup step never gets to destroy it.
+    let enhancement: EnhanceResult = {
+      text: rawText,
+      enhanced: false,
+      fixes: 0,
+      dropped: [],
+      durationMs: 0,
+    }
+    const enhanceKey = getApiKey()
+    if (settings.enhanceEnabled === 'true' && enhanceKey) {
+      // A fresh controller so Esc reaches the cleanup call too. Without it the
+      // widget would keep spinning through a round trip the user cancelled.
+      this.#abort = new AbortController()
+      try {
+        enhancement = await enhanceText(rawText, enhanceKey, this.#abort.signal)
+      } finally {
+        this.#abort = null
+      }
+      if (this.#phase !== 'working') return // cancelled during the cleanup
+    }
+
+    // §9 — the dictionary runs AFTER the LLM, never before. Reversed, the LLM
+    // "corrects" the dictionary's corrections back into errors.
+    const replaced = applyDictionary(enhancement.text, rules)
     bumpHitCounts(replaced.hitIds)
 
     // Last transform before the text leaves, and deliberately so: the command
@@ -239,12 +271,26 @@ class DictationSession {
     // pointing at nothing is a Play button that is permanently broken.
     const recording = keepRecording(settings, clip)
 
+    // Bound once rather than repeated at each of the three exits below. They
+    // all persist exactly the same row, and three copies of a seven-argument
+    // call is how one of them quietly ends up different from the others.
+    const save = (): void =>
+      persist({
+        rawText,
+        finalText: command.text,
+        durationMs: meta.durationMs,
+        providerId,
+        enhancement,
+        dictionaryFixes: replaced.fixes,
+        recording,
+      })
+
     // §6.4 — a non-elevated process cannot send input to an elevated window.
     // Detect it and say so, rather than appearing to succeed.
     const blocked = this.#target ? await this.#target.elevated : false
     if (this.#phase !== 'working') return // cancelled while the probe finished
     if (blocked) {
-      persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
+      save()
       this.#settle('blocked')
       return
     }
@@ -256,12 +302,12 @@ class DictationSession {
       await insertText(command.text, Number(settings.typingDelayMs))
       if (command.pressEnter) await pressEnter()
     } catch (err) {
-      persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
+      save()
       this.#settle('error', err instanceof Error ? err.message : 'Could not insert the text.')
       return
     }
 
-    persist(rawText, command.text, meta.durationMs, providerId, replaced.fixes, recording)
+    save()
     this.#settle('success')
   }
 
@@ -283,6 +329,11 @@ class DictationSession {
         return
       case 'no-key':
         this.#settle('error', 'Add your Groq API key in Settings.')
+        return
+      case 'no-model':
+        // The widget ignores mouse events, so this cannot be a link. The copy
+        // has to carry the whole instruction on its own (§12).
+        this.#settle('error', 'Download the local model in Settings.')
         return
       case 'unauthorized':
         this.#settle('error', 'Groq rejected the API key.')
@@ -364,24 +415,31 @@ function keepRecording(
   }
 }
 
-function persist(
-  rawText: string,
-  finalText: string,
-  durationMs: number,
-  providerId: string,
-  dictionaryFixes: number,
-  recording: WrittenRecording | null,
-): void {
+function persist(row: {
+  rawText: string
+  finalText: string
+  durationMs: number
+  providerId: string
+  enhancement: EnhanceResult
+  dictionaryFixes: number
+  recording: WrittenRecording | null
+}): void {
+  const { rawText, finalText, durationMs, providerId, enhancement, recording } = row
   try {
     createDictation({
       rawText,
       finalText,
       durationMs,
       providerId,
-      // §4 — enhancement is off in v1, so grammarFixes is 0 by definition.
-      enhanced: false,
-      grammarFixes: 0,
-      dictionaryFixes,
+      // §4 — `rawText` stays the source of truth either way. `enhanced` marks
+      // the rows where the cleanup was actually ACCEPTED, so a pass that got
+      // rejected for dropping a word is indistinguishable from the feature
+      // being off — which is exactly what it amounts to.
+      enhanced: enhancement.enhanced,
+      // §8 — word-level Levenshtein across the cleanup step. Zero when
+      // enhancement is off, and zero when its output was rejected.
+      grammarFixes: enhancement.fixes,
+      dictionaryFixes: row.dictionaryFixes,
       audioFile: recording?.file ?? null,
       audioBytes: recording?.bytes ?? null,
       audioMime: recording?.mime ?? null,

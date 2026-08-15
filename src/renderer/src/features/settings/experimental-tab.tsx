@@ -27,6 +27,22 @@ export function ExperimentalTab({ settings, save }: SettingsStore) {
             onChange={(next) => void save("pressEnterCommand", String(next))}
           />
         </Row>
+
+        {/* §4 — measured deleting a word from the same sentence on three runs,
+            including with an explicit NEVER DELETE A WORD instruction. It ships
+            here, off, with §10's detector as a hard gate: if a word goes
+            missing the whole pass is thrown away and the raw transcript is
+            used, so the worst case is that nothing happened. */}
+        <Row
+          label="Grammar cleanup"
+          hint="Sends the transcript to Groq's Llama 3.3 for grammar and punctuation, adding about 300ms. If the model drops a word, which it did in testing, the result is discarded and your raw transcript is used instead. Needs a Groq API key and a connection, including when you transcribe with Moonshine."
+        >
+          <Toggle
+            label="Grammar cleanup"
+            checked={settings?.enhanceEnabled === "true"}
+            onChange={(next) => void save("enhanceEnabled", String(next))}
+          />
+        </Row>
       </Section>
     </div>
   );

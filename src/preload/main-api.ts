@@ -11,6 +11,9 @@ import type {
   InsightsDto,
   IpcMap,
   ListDictationsQuery,
+  MoonshineModelSize,
+  MoonshineProgress,
+  MoonshineStatus,
   NewDictationDto,
   NewDictionaryDto,
   RecordingsStats,
@@ -133,6 +136,35 @@ export const mainApi = {
   clipboard: {
     /** Main owns this: a file:// page has no `navigator.clipboard`. */
     write: (text: string): Promise<void> => invoke(IPC.clipboardWrite, text),
+  },
+  /**
+   * The local speech model. Only its state and size cross the bridge — the
+   * renderer never names a path or a URL, the same rule `recordings` follows.
+   */
+  moonshine: {
+    status: (size?: MoonshineModelSize): Promise<MoonshineStatus> =>
+      invoke(IPC.moonshineStatus, size),
+    /**
+     * Returns as soon as the download STARTS, not when it finishes — it is
+     * hundreds of megabytes. Watch `onProgress` and `onStatus` for the rest.
+     */
+    download: (size: MoonshineModelSize): Promise<MoonshineStatus> =>
+      invoke(IPC.moonshineDownload, size),
+    cancel: (): Promise<MoonshineStatus> => invoke(IPC.moonshineCancel),
+    remove: (size: MoonshineModelSize): Promise<MoonshineStatus> =>
+      invoke(IPC.moonshineDelete, size),
+
+    onProgress: (cb: (progress: MoonshineProgress) => void): (() => void) => {
+      const listener = (_e: unknown, progress: MoonshineProgress) => cb(progress)
+      ipcRenderer.on(IPC_EVENT.moonshineProgress, listener)
+      return () => ipcRenderer.off(IPC_EVENT.moonshineProgress, listener)
+    },
+
+    onStatus: (cb: (status: MoonshineStatus) => void): (() => void) => {
+      const listener = (_e: unknown, status: MoonshineStatus) => cb(status)
+      ipcRenderer.on(IPC_EVENT.moonshineStatusChanged, listener)
+      return () => ipcRenderer.off(IPC_EVENT.moonshineStatusChanged, listener)
+    },
   },
   apiKey: {
     status: (): Promise<ApiKeyStatus> => invoke(IPC.apiKeyStatus),

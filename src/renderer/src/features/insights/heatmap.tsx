@@ -59,8 +59,8 @@ const sessionLabel = (stat: DayStat): string => {
 const describe = (stat: DayStat): string => {
   const date = parseDay(stat.day)
   const when = `${MONTHS[date.getMonth()] ?? ''} ${date.getDate()}, ${date.getFullYear()}`
-  if (stat.sessions === 0) return `${when} — nothing dictated`
-  return `${when} — ${stat.words.toLocaleString()} ${stat.words === 1 ? 'word' : 'words'} in ${
+  if (stat.sessions === 0) return `${when}: nothing dictated`
+  return `${when}: ${stat.words.toLocaleString()} ${stat.words === 1 ? 'word' : 'words'} in ${
     stat.sessions
   } ${stat.sessions === 1 ? 'session' : 'sessions'}`
 }

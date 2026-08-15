@@ -1,8 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import { IPC_EVENT, WIDGET_ROLE_ARG } from '../../shared/ipc-channels.js'
+import { WIDGET_ROLE_ARG } from '../../shared/ipc-channels.js'
 import type { IpcEventMap } from '../../shared/types.js'
-import { readSetting } from '../settings.js'
 
 /**
  * The floating dictation widget (§6.2, §6.3).
@@ -75,19 +74,8 @@ export function createWidgetWindow(): BrowserWindow {
     widget = null
   })
 
-  // Pre-open a non-default mic while idle. USB interfaces often need 200–500ms
-  // on the first getUserMedia of a session; doing that here keeps key-down instant.
-  win.webContents.once('did-finish-load', () => {
-    prepareWidgetMic(readSetting('microphoneId'))
-  })
-
   widget = win
   return win
-}
-
-/** Keep (or release) a warm capture stream on the widget renderer. */
-export function prepareWidgetMic(deviceId: string): void {
-  sendToWidget(IPC_EVENT.widgetCommand, { type: 'prepare', deviceId })
 }
 
 export function getWidgetWindow(): BrowserWindow | null {

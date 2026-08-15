@@ -29,6 +29,16 @@ export interface SpeechProvider {
   readonly id: string
   readonly label: string
   readonly requiresNetwork: boolean
+  /**
+   * Whether `vocabularyHint` means anything to this provider.
+   *
+   * Whisper takes a continuation hint and can echo it into the transcript
+   * (§6.5), which is why the caller also has to strip it afterwards. A provider
+   * that never sees the hint must not have that stripping applied to its
+   * output, so the caller checks this rather than passing a hint to everyone
+   * and hoping it is ignored.
+   */
+  readonly acceptsVocabularyHint: boolean
   transcribe(audio: Buffer, opts: TranscribeOptions): Promise<TranscribeResult>
 }
 
@@ -42,6 +52,8 @@ export type SpeechErrorKind =
   | 'rate-limited'
   | 'unauthorized'
   | 'no-key'
+  /** Local engine only: the model is missing, partial or corrupted on disk. */
+  | 'no-model'
   | 'cancelled'
   | 'too-large'
   | 'unknown'

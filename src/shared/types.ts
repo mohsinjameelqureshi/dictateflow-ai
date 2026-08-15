@@ -17,6 +17,9 @@ export const SETTING_KEYS = [
   'keepRecordings',
   'recordingRetentionDays',
   'pressEnterCommand',
+  'moonshineModelSize',
+  'moonshineLivePreview',
+  'moonshineHighAccuracyFinal',
 ] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
@@ -38,6 +41,105 @@ export const DEFAULT_SETTINGS: Record<SettingKey, string> = {
   // behind Experimental and starts off. It removes words from what gets typed,
   // which is the one thing §4 is emphatic about never doing by surprise.
   pressEnterCommand: 'false',
+  // Moonshine, the local engine. These are read only when `speechProvider` is
+  // 'moonshine'; `language` above stays the GROQ language and is deliberately
+  // never written by the local engine, so switching engines is lossless.
+  moonshineModelSize: 'medium', // beats Whisper Large v3 at 245M params
+  moonshineLivePreview: 'true',
+  moonshineHighAccuracyFinal: 'true',
+}
+
+/* ---------------------------------------------------------- moonshine ---- */
+
+/**
+ * The local engine (see docs/moonshine-integration-plan.md).
+ *
+ * English only, and that is a LICENSING boundary rather than a preference:
+ * Moonshine's English weights are MIT, every other language is under a
+ * community licence that is non-commercial and terminates above $1M revenue.
+ * The language is a constant in the worker, never a parameter.
+ */
+export const MOONSHINE_LANGUAGE = 'en'
+
+export type MoonshineModelSize = 'medium' | 'small' | 'tiny'
+
+export interface MoonshineModelSpec {
+  size: MoonshineModelSize
+  label: string
+  /** `ModelArch` value the WASM binding expects. Passed as a string. */
+  arch: number
+  /**
+   * Total download. MEASURED from the live manifest, not estimated — the
+   * integration spec guessed Tiny at ~30MB and it is actually 50.6MB.
+   */
+  bytes: number
+  /** Word error rate, from the Moonshine model card. */
+  wer: string
+  hint: string
+}
+
+export const MOONSHINE_MODELS: Record<MoonshineModelSize, MoonshineModelSpec> = {
+  medium: {
+    size: 'medium',
+    label: 'Medium',
+    arch: 5,
+    bytes: 306_356_461,
+    wer: '6.65%',
+    hint: 'Best accuracy. Beats Whisper Large v3 at a sixth of the size.',
+  },
+  small: {
+    size: 'small',
+    label: 'Small',
+    arch: 4,
+    bytes: 167_154_628,
+    wer: '7.84%',
+    hint: 'Half the download, close to Medium. For older machines.',
+  },
+  tiny: {
+    size: 'tiny',
+    label: 'Tiny',
+    arch: 2,
+    bytes: 53_107_313,
+    wer: '12.00%',
+    hint: 'Fastest and smallest. Noticeably weaker on names.',
+  },
+}
+
+export const MOONSHINE_SIZES: MoonshineModelSize[] = ['medium', 'small', 'tiny']
+
+export function isMoonshineSize(value: string): value is MoonshineModelSize {
+  return (MOONSHINE_SIZES as string[]).includes(value)
+}
+
+/**
+ * What Settings knows about a local model.
+ *
+ * `absent` and `partial` are deliberately distinct: a partial model resumes
+ * rather than restarting, and saying so is the difference between "downloading
+ * 292MB again" and "picking up where it left off".
+ */
+export type MoonshineModelState = 'absent' | 'partial' | 'downloading' | 'ready' | 'error'
+
+export interface MoonshineStatus {
+  size: MoonshineModelSize
+  state: MoonshineModelState
+  /** Bytes present on disk for this model. */
+  bytes: number
+  /** Total the model needs. From the manifest once known, else the spec table. */
+  totalBytes: number
+  /** Only set on `error`. */
+  problem?: string
+  /** Whether the engine is loaded and ready to transcribe right now. */
+  loaded: boolean
+}
+
+/** Pushed while a download runs, so the card can show real progress (§7.5). */
+export interface MoonshineProgress {
+  size: MoonshineModelSize
+  bytes: number
+  totalBytes: number
+  /** The file currently in flight, for the "downloading encoder.ort" line. */
+  file: string
 }
 
 /** §8 — the offered retention windows. 0 is "keep everything", not "delete now". */
@@ -315,7 +417,6 @@ export type WidgetCommand =
   | { type: 'stop' }
   | { type: 'cancel' }
   /** Open (or release) a capture stream before key-down. External mics are slow. */
-  | { type: 'prepare'; deviceId: string }
 
 export interface ClipMeta {
   sampleRate: number
@@ -395,6 +496,10 @@ export interface IpcMap {
   'settings:open': [SettingsTab | undefined, void]
   'shortcut:suspend': [boolean, void]
   'app:info': [void, AppInfo]
+  'moonshine:status': [MoonshineModelSize | undefined, MoonshineStatus]
+  'moonshine:download': [MoonshineModelSize, MoonshineStatus]
+  'moonshine:cancel': [void, MoonshineStatus]
+  'moonshine:delete': [MoonshineModelSize, MoonshineStatus]
 }
 
 /**
@@ -420,6 +525,10 @@ export interface IpcEventMap {
    */
   'settings:changed': Settings
   'devices:changed': void
+  /** main -> main window: local model download progress (§7.5). */
+  'moonshine:progress': MoonshineProgress
+  /** main -> main window: the model's state changed (ready, failed, deleted). */
+  'moonshine:statusChanged': MoonshineStatus
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */

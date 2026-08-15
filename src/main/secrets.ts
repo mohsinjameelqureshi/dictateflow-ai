@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ApiKeyStatus } from '../shared/types.js'
+import { resetEnhanceProvider } from '../services/enhance/index.js'
 import { resetSpeechProvider } from '../services/speech/index.js'
 
 /**
@@ -63,6 +64,9 @@ export function setApiKey(key: string): ApiKeyStatus {
   writeFileSync(FILE(), safeStorage.encryptString(trimmed), { mode: 0o600 })
   memo = trimmed
   resetSpeechProvider()
+  // Both cached clients hold the old key. Missing this one would leave the
+  // cleanup step authenticating with a key the user has already replaced.
+  resetEnhanceProvider()
   return apiKeyStatus()
 }
 
@@ -70,5 +74,6 @@ export function clearApiKey(): ApiKeyStatus {
   rmSync(FILE(), { force: true })
   memo = null
   resetSpeechProvider()
+  resetEnhanceProvider()
   return apiKeyStatus()
 }

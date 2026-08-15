@@ -4,6 +4,13 @@ import { runAudioMaintenance } from './audio/maintenance.js'
 import { registerAudioProtocol, registerAudioScheme } from './audio/protocol.js'
 import { AUDIO_SCHEME } from '../shared/types.js'
 import { registerIpcHandlers } from './ipc/handlers.js'
+import { broadcastMoonshineProgress, broadcastMoonshineStatus } from './broadcast.js'
+import {
+  onMoonshineProgress,
+  onMoonshineStatus,
+  stopMoonshine,
+  warmMoonshine,
+} from './moonshine/host.js'
 import { readFlag } from './settings.js'
 import { applyLoginItem } from './startup.js'
 import { broadcastTheme, initTheme } from './theme.js'
@@ -12,6 +19,20 @@ import { createTray } from './tray.js'
 import { createMainWindow } from './windows/main-window.js'
 import { createWidgetWindow, getWidgetWindow } from './windows/widget-window.js'
 import { migrateUserData } from './migrate-user-data.js'
+
+/**
+ * Relay the local engine's progress and state onto the renderer.
+ *
+ * The host deliberately knows nothing about windows, so this is where the two
+ * meet — the same split `audio/store.ts` and `db/` keep.
+ */
+function connectMoonshineEvents(): void {
+  // Straight through. Both events already name the model they concern, so
+  // there is nothing to look up here — and nothing to get wrong when the model
+  // being downloaded is not the model currently selected.
+  onMoonshineProgress(broadcastMoonshineProgress)
+  onMoonshineStatus(broadcastMoonshineStatus)
+}
 
 // Single instance: a second launch should focus the existing window, not
 // open a second one holding the same SQLite file — or install a second
@@ -87,6 +108,9 @@ if (!app.requestSingleInstanceLock()) {
 
     migrateUserData()
     initDb()
+    // After initDb — both callbacks read the settings table to answer "which
+    // model?", and the download card is driven entirely by these.
+    connectMoonshineEvents()
     // After initDb — the handler resolves a dictation id through the database,
     // so there must be a database to resolve it against.
     registerAudioProtocol()
@@ -107,6 +131,11 @@ if (!app.requestSingleInstanceLock()) {
     createTray()
     startShortcut()
 
+    // §10 — load the local model at startup, not on the first hotkey press.
+    // It costs seconds, and the user pressing the key is already speaking.
+    // No-ops unless Moonshine is the selected engine and its model is present.
+    warmMoonshine()
+
     // After the windows exist, so the first broadcast reaches them. Renderers
     // also ask for the theme on mount, which covers a window opened later.
     initTheme()
@@ -125,6 +154,9 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('will-quit', () => {
     stopShortcut()
+    // The inference child does not outlive the app. Without this a killed
+    // window leaves a utilityProcess holding a 292MB model resident.
+    stopMoonshine()
     closeDb()
   })
 }

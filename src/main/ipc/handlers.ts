@@ -25,6 +25,8 @@ import {
   type InsightsDto,
   type IpcMap,
   type ListDictationsQuery,
+  type MoonshineModelSize,
+  type MoonshineStatus,
   type NewDictationDto,
   type NewDictionaryDto,
   type RecordingsStats,
@@ -38,10 +40,17 @@ import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
 import { listAudioInputs, onAudioInputsChanged, receiveAudioInputs } from '../audio/devices.js'
 import { clearRecordings, recordingsSize } from '../audio/store.js'
 import { session } from '../dictation/session.js'
+import {
+  cancelDownload,
+  downloadModel,
+  ensureModel,
+  moonshineStatus,
+  removeModel,
+  unloadModel,
+} from '../moonshine/host.js'
 import { readSettings, writeSetting } from '../settings.js'
 import { onShortcutChanged, setShortcutSuspended } from '../shortcut/index.js'
 import { openSettings } from '../windows/main-window.js'
-import { prepareWidgetMic } from '../windows/widget-window.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -214,6 +223,28 @@ export function registerIpcHandlers(): void {
     return recordingsSize()
   })
 
+  /* ------------------------------------------------------- moonshine ---- */
+
+  // The local model on disk. Inference never crosses this boundary — it runs
+  // in a utilityProcess and is reached through the speech provider.
+  handle(IPC.moonshineStatus, (size: MoonshineModelSize | undefined): MoonshineStatus =>
+    size ? moonshineStatus(size) : moonshineStatus(),
+  )
+
+  // Deliberately not awaited into the reply. A 292MB download takes minutes,
+  // and an `invoke` that hangs for minutes is indistinguishable from a broken
+  // one. Progress and completion arrive as events instead.
+  handle(IPC.moonshineDownload, (size: MoonshineModelSize): MoonshineStatus => {
+    void downloadModel(size)
+    return moonshineStatus(size)
+  })
+
+  handle(IPC.moonshineCancel, (): Promise<MoonshineStatus> => cancelDownload())
+
+  handle(IPC.moonshineDelete, (size: MoonshineModelSize): Promise<MoonshineStatus> =>
+    removeModel(size),
+  )
+
   /* ------------------------------------------------------- clipboard ---- */
 
   // §6.4's insert path snapshots and restores the clipboard around a paste.
@@ -244,6 +275,17 @@ export function registerIpcHandlers(): void {
  * reads as working. Anything added to SETTING_KEYS with real behaviour behind
  * it belongs here.
  */
+/**
+ * Bring the selected local model up, downloading it first if it is missing.
+ *
+ * A failure here is not a failure of the setting the user just changed — the
+ * switch itself worked. It surfaces on the model card in Settings, on the
+ * title bar's progress pill, and on the next dictation.
+ */
+function warmSelectedModel(): void {
+  ensureModel()
+}
+
 function applySettingEffect(key: SettingKey, value: string): void {
   switch (key) {
     case 'shortcut':
@@ -257,8 +299,20 @@ function applySettingEffect(key: SettingKey, value: string): void {
       // Resolves 'system' and pushes the answer to all three windows.
       applyTheme(value)
       return
-    case 'microphoneId':
-      prepareWidgetMic(value)
+    case 'speechProvider':
+      // Loading the local model costs seconds (MEASURED), so it happens on the
+      // switch rather than on the first hotkey — the user is already speaking
+      // by then. Switching away frees the ~300MB it holds; leaving it resident
+      // for an engine nobody selected is not a cost worth paying silently.
+      if (value === 'moonshine') warmSelectedModel()
+      else void unloadModel()
+      return
+    case 'moonshineModelSize':
+      // Same reasoning, and `ensureModel` swaps rather than stacking: the old
+      // model is dropped before the new one is read. A size the machine does
+      // not have yet starts downloading here, which is what makes picking one
+      // from the title bar do something.
+      if (readSettings().speechProvider === 'moonshine') warmSelectedModel()
       return
     default:
       // `language` and friends are read at the point of use.
