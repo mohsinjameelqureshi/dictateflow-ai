@@ -58,3 +58,45 @@ skills-lock.json
 OPEN-SOURCE-PLAN.md
 
 *.tsbuildinfo
+
+# Generated knowledge graph. `graphify update .` rebuilds it from the AST at
+# no API cost, and cache/ plus .graphify_root hold absolute paths from the
+# machine that built it. 2.3 MB of derived data that would churn on every
+# commit — regenerate rather than track.
+graphify-out/
+
+# Hook config pointing at a graphify.exe under this machine's home directory.
+# The `.local` file beside it is already ignored; this one is only shareable
+# once the command is a bare `graphify` on PATH. Ignored until then.
+.claude/settings.json
+
+# Personal interview prep, not project documentation. Same reasoning as
+# OPEN-SOURCE-PLAN.md above — kept on disk, not published.
+docs/INTERVIEW-DRILL.md
+docs/CODEBASE-GUIDE.md
+docs/moonshine-integration-plan.md
+
+# The safeStorage blob holding the Groq key. It normally lives in userData,
+# but migrate-user-data.ts copies one forward from a legacy app root, so the
+# filename can legitimately appear next to a checkout. Never commit it.
+groq-key.bin
+
+# Code-signing material for Phase 7. A certificate committed once is a
+# certificate that has to be revoked.
+*.pfx
+*.p12
+*.pem
+*.key
+*.cer
+
+# Editor and OS droppings.
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini
+
+# Build and test scratch.
+coverage/
+.cache/
+*.tmp
