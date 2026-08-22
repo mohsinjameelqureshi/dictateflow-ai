@@ -160,7 +160,11 @@ Click **More info**, then **Run anyway**.
 
 That warning means "nobody has paid to vouch for this file", not "this file is
 known to be malicious". If you would rather not take that on faith, verify the
-download against the SHA256 published with this release:
+download:
+
+```
+SHA256  4CFE9E450E9C41DD8A61DE7C84419F3E510FFB73D7D21118FC55823B22B685C5
+```
 
 ```powershell
 Get-FileHash .\dictateflow-ai.exe -Algorithm SHA256
