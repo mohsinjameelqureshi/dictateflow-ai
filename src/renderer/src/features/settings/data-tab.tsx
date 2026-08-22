@@ -42,16 +42,22 @@ export function DataTab({ settings, save }: SettingsStore) {
         return;
       }
 
+      // Transforms are only named when there are some. A fresh install has
+      // exactly one seeded rule and reporting "1 transform" on every export
+      // would be noise about something the user never touched.
+      const parts = [
+        count(result.dictations, "transcript"),
+        count(result.dictionary, "dictionary word"),
+        ...(result.transforms > 0 ? [count(result.transforms, "transform")] : []),
+      ];
+      const listed = parts.length > 1
+        ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+        : parts[0];
+
       setNote(
         which === "export"
-          ? `Saved ${count(result.dictations, "transcript")} and ${count(
-              result.dictionary,
-              "dictionary word",
-            )}.`
-          : `Added ${count(result.dictations, "transcript")} and ${count(
-              result.dictionary,
-              "dictionary word",
-            )}${result.skipped > 0 ? `. Skipped ${result.skipped} already here` : ""}.`,
+          ? `Saved ${listed}.`
+          : `Added ${listed}${result.skipped > 0 ? `. Skipped ${result.skipped} already here` : ""}.`,
       );
     } catch {
       setProblem("That did not finish. Nothing was changed.");
@@ -82,7 +88,7 @@ export function DataTab({ settings, save }: SettingsStore) {
       >
         <Row
           label="Export everything"
-          hint="Transcripts, dictionary and settings, in one file."
+          hint="Transcripts, dictionary, transforms and settings, in one file. Never your API keys."
         >
           <Button
             variant="secondary"

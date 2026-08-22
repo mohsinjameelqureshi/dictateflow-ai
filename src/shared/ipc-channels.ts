@@ -59,10 +59,13 @@ export const IPC = {
      is not a secure context, so `navigator.clipboard` is unavailable there. */
   clipboardWrite: 'clipboard:write',
 
-  /* the Groq key. safeStorage only — never the settings table (§2). */
+  /* the stored secrets — Groq, and Gemini for Transform. safeStorage only,
+     never the settings table and never an export (§2). Each call names one. */
   apiKeyStatus: 'apiKey:status',
   apiKeySet: 'apiKey:set',
   apiKeyClear: 'apiKey:clear',
+  /** Ask the provider whether the stored key works. Replaces guessing at its shape. */
+  apiKeyVerify: 'apiKey:verify',
 
   /* capture loop. The widget renderer owns the microphone; main owns
      everything else. Both directions are enumerated here. */
@@ -79,6 +82,15 @@ export const IPC = {
   moonshineCancel: 'moonshine:cancel',
   moonshineDelete: 'moonshine:delete',
 
+  /* transform — LLM rules bound to their own tap shortcuts (1.1.0).
+     See docs/transform-feature-plan.md. */
+  transformsList: 'transforms:list',
+  transformsCreate: 'transforms:create',
+  transformsUpdate: 'transforms:update',
+  transformsDelete: 'transforms:delete',
+  /** The provider's own model list, so the picker cannot go stale. */
+  transformsModels: 'transforms:models',
+
   /* diagnostics */
   appInfo: 'app:info',
 } as const
@@ -90,7 +102,7 @@ export const IPC = {
 export const IPC_EVENT = {
   /** main -> widget: start, stop or discard a recording */
   widgetCommand: 'widget:command',
-  /** main -> widget: which of the nine states to render (§11) */
+  /** main -> widget: which state to render (§11, plus the three transform ones) */
   widgetState: 'widget:state',
   /** main -> widget: list the audio inputs and reply on `widget:devices` */
   widgetEnumerate: 'widget:enumerate',
@@ -112,6 +124,8 @@ export const IPC_EVENT = {
       Deliberately NOT 'moonshine:status' — that name is an invoke channel, and
       one string serving both an `handle` and a `send` is a debugging trap. */
   moonshineStatusChanged: 'moonshine:statusChanged',
+  /** main -> main window: a transform ran, so its hit count moved. */
+  transformsChanged: 'transforms:changed',
 } as const
 
 /**

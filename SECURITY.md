@@ -20,27 +20,36 @@ Worth knowing before assessing it. DictateFlow AI:
   keystroke system-wide, in order to detect the hold-to-talk shortcut
 - **simulates keyboard input** (`nut.js`) to paste into the focused window
 - **reads and writes the clipboard** on every dictation
-- holds a **Groq API key** and sends recorded audio to Groq's API
+- holds **API keys** — Groq, and optionally Google Gemini — and sends recorded
+  audio to Groq's API
+- **cuts text out of the focused window and sends it to an LLM** when a
+  Transform shortcut is pressed
 - writes an unencrypted SQLite database and WAV files to `%APPDATA%`
 
 Any of those is worth scrutiny. That is why the source is public.
 
 ## Design
 
-**The API key** is the only secret the app holds. It is encrypted with
+**The API keys** are the only secrets the app holds — the Groq key, and a
+Google Gemini key if you set one for transforms. Each is encrypted with
 Electron `safeStorage`, which on Windows is DPAPI, and written to
-`groq-key.bin` — deliberately *not* into the settings table, so that a copied
-database yields nothing. The ciphertext is bound to the Windows user account,
-so the file is useless on another machine or under another account. If OS
-encryption is unavailable the app refuses to save the key rather than falling
-back to plaintext.
+`groq-key.bin` / `gemini-key.bin` — deliberately *not* into the settings table,
+so that a copied database yields nothing. The ciphertext is bound to the
+Windows user account, so the files are useless on another machine or under
+another account. If OS encryption is unavailable the app refuses to save a key
+rather than falling back to plaintext. Neither key is ever included in an
+export.
+
+Keys are validated by asking the provider, not by matching a prefix. An earlier
+build checked prefixes and refused a valid Gemini key for having the wrong one;
+a credential's format belongs to the company that issues it.
 
 **The renderer is sandboxed.** `contextIsolation: true`,
 `nodeIntegration: false`, `sandbox: true`, and a typed preload bridge exposing
 a fixed set of IPC channels. The renderer has no filesystem access, cannot
-read the API key, and loads no remote content. The Content-Security-Policy
-keeps `connect-src` at `'self'` in production — the Groq call happens in the
-main process.
+read either API key, and loads no remote content. The Content-Security-Policy
+keeps `connect-src` at `'self'` in production — every outbound call, to Groq or
+to Google, happens in the main process.
 
 **Audio playback cannot be used to read arbitrary files.** The
 `dictateflow-audio://` handler takes a dictation id, not a path. It looks the
@@ -63,7 +72,17 @@ Stated plainly so nobody assumes otherwise:
 - **Releases are not code signed.** Verify the published SHA256 checksum, or
   build from source.
 - **Audio goes to a third party.** Groq receives your recorded speech and is
-  governed by their privacy policy, not this one.
+  governed by their privacy policy, not this one. The Moonshine local engine
+  avoids this entirely.
+- **Transformed text goes to a third party.** Running a Transform sends the
+  contents of the focused field to whichever provider you selected, Groq or
+  Google. This applies even when you transcribe locally with Moonshine — a
+  transform is the one action that always leaves the machine, and the app says
+  so in Settings rather than only here.
+- **Transform simulates Ctrl+A, Ctrl+C and Ctrl+X in the focused window.** With
+  nothing selected it takes the whole field, which in a document is the whole
+  document. The original is restored on every failure path, but the keystrokes
+  themselves reach whatever had focus.
 
 ## Dependencies
 

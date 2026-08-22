@@ -6,6 +6,7 @@ import {
   Mic,
   SlidersHorizontal,
   TriangleAlert,
+  WandSparkles,
   type LucideIcon,
 } from 'lucide-react'
 import { Dialog } from '@/components/ui/dialog.js'
@@ -17,6 +18,7 @@ import { DataTab } from './data-tab.js'
 import { ExperimentalTab } from './experimental-tab.js'
 import { GeneralTab } from './general-tab.js'
 import { TranscriptionTab } from './transcription-tab.js'
+import { TransformTab } from './transform-tab.js'
 import { useSettings } from './use-settings.js'
 
 /**
@@ -37,6 +39,9 @@ import { useSettings } from './use-settings.js'
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: SlidersHorizontal },
   { id: 'transcription', label: 'Transcription', icon: Mic },
+  // Reads in order: what turns speech into text, what rewrites text, then the
+  // keys both of them use. Same mark as the sidebar's Transform entry.
+  { id: 'transform', label: 'Transform', icon: WandSparkles },
   { id: 'api', label: 'API', icon: Key },
   { id: 'data', label: 'Data', icon: Database },
   // Last before About, because nothing here is load-bearing and the rail reads
@@ -99,6 +104,7 @@ export function SettingsDialog({
 
           {tab === 'general' && <GeneralTab {...store} />}
           {tab === 'transcription' && <TranscriptionTab {...store} />}
+          {tab === 'transform' && <TransformTab {...store} />}
           {tab === 'api' && <ApiTab {...store} />}
           {tab === 'data' && <DataTab {...store} />}
           {tab === 'experimental' && <ExperimentalTab {...store} />}

@@ -1,58 +1,91 @@
 import { app, safeStorage } from 'electron'
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ApiKeyStatus } from '../shared/types.js'
+import { MIN_API_KEY_LENGTH, type ApiKeyStatus, type SecretId } from '../shared/types.js'
 import { resetEnhanceProvider } from '../services/enhance/index.js'
 import { resetSpeechProvider } from '../services/speech/index.js'
+import { resetTransformProvider } from '../services/transform/index.js'
 
 /**
- * The Groq API key — the only secret in the app (§2).
+ * The stored secrets (§2). Groq, and — since 1.1.0 — Gemini for Transform.
  *
- * It deliberately does NOT live in the settings table. safeStorage hands the
- * ciphertext to the Windows Credential Manager's DPAPI, keyed to this user
- * account, so a copied dictateflow.db is worthless on another machine.
+ * Neither lives in the settings table. safeStorage hands the ciphertext to the
+ * Windows Credential Manager's DPAPI, keyed to this user account, so a copied
+ * dictateflow.db is worthless on another machine. Adding a second secret does
+ * not weaken that argument; it doubles it.
+ *
+ * Files are named per secret. The Groq filename is unchanged from 1.0.0 on
+ * purpose — an existing install must keep its key across the upgrade.
  */
-const FILE = () => join(app.getPath('userData'), 'groq-key.bin')
+const FILE = (id: SecretId): string => join(app.getPath('userData'), `${id}-key.bin`)
 
-let memo: string | null | undefined
+/**
+ * Decrypted values, memoised per secret. `undefined` means "not read yet";
+ * `null` means "read, and there is none".
+ */
+const memo = new Map<SecretId, string | null>()
 
-export function apiKeyStatus(): ApiKeyStatus {
+export function apiKeyStatus(id: SecretId): ApiKeyStatus {
   return {
-    present: getApiKey() !== null,
+    id,
+    present: getSecret(id) !== null,
     encryptionAvailable: safeStorage.isEncryptionAvailable(),
   }
 }
 
-export function getApiKey(): string | null {
-  if (memo !== undefined) return memo
+export function getSecret(id: SecretId): string | null {
+  const hit = memo.get(id)
+  if (hit !== undefined) return hit
 
-  const file = FILE()
-  if (!existsSync(file)) return (memo = null)
+  const file = FILE(id)
+  if (!existsSync(file)) {
+    memo.set(id, null)
+    return null
+  }
 
   try {
-    memo = safeStorage.decryptString(readFileSync(file))
+    const value = safeStorage.decryptString(readFileSync(file))
+    memo.set(id, value)
+    return value
   } catch {
     // Wrong user account, or the DPAPI blob was corrupted. Treat as absent
     // rather than throwing on every dictation forever.
-    memo = null
+    memo.set(id, null)
+    return null
   }
-  return memo
 }
 
 /**
- * Groq issues keys with this prefix. Checking it turns a typo — a truncated
- * paste, the wrong provider's key — into an error at the moment of entry,
- * where the user is looking at the field, instead of a 401 on their first
- * dictation with the widget saying the key was rejected.
+ * The Groq key, by its old name.
+ *
+ * Kept because it is read on the insert path in three places, and
+ * `getSecret('groq')` at each of them would be three chances to pass the wrong
+ * literal. Transcription and grammar cleanup are Groq-only; only Transform has
+ * a choice to make.
  */
-const KEY_PREFIX = 'gsk_'
+export function getApiKey(): string | null {
+  return getSecret('groq')
+}
 
-export function setApiKey(key: string): ApiKeyStatus {
+export function setApiKey(id: SecretId, key: string): ApiKeyStatus {
   const trimmed = key.trim()
-  if (!trimmed) return clearApiKey()
+  if (!trimmed) return clearApiKey(id)
 
-  if (!trimmed.startsWith(KEY_PREFIX)) {
-    throw new Error(`A Groq key starts with "${KEY_PREFIX}". Check you copied the whole key.`)
+  // Deliberately NOT a prefix check any more.
+  //
+  // This used to reject anything not starting with a hardcoded prefix, and the
+  // Gemini prefix was wrong — Google issues keys beginning `AQ.` as well as
+  // `AIza`, so a valid key was refused with a confident message telling the
+  // user it was malformed. Failing closed on a guess about another company's
+  // credential format is the worst way to be wrong: the user has no way to
+  // override it and every reason to believe us.
+  //
+  // What stays is a shape check loose enough to only catch a genuine slip — an
+  // empty field, a pasted sentence, half a key. Whether it actually WORKS is
+  // answered by asking the provider (`apiKey:verify`), which is the only party
+  // that can know.
+  if (/\s/.test(trimmed) || trimmed.length < MIN_API_KEY_LENGTH) {
+    throw new Error('That does not look like a complete key. Check you copied all of it.')
   }
 
   if (!safeStorage.isEncryptionAvailable()) {
@@ -61,19 +94,32 @@ export function setApiKey(key: string): ApiKeyStatus {
     throw new Error('OS encryption is unavailable, so the key was not saved.')
   }
 
-  writeFileSync(FILE(), safeStorage.encryptString(trimmed), { mode: 0o600 })
-  memo = trimmed
-  resetSpeechProvider()
-  // Both cached clients hold the old key. Missing this one would leave the
-  // cleanup step authenticating with a key the user has already replaced.
-  resetEnhanceProvider()
-  return apiKeyStatus()
+  writeFileSync(FILE(id), safeStorage.encryptString(trimmed), { mode: 0o600 })
+  memo.set(id, trimmed)
+  invalidate(id)
+  return apiKeyStatus(id)
 }
 
-export function clearApiKey(): ApiKeyStatus {
-  rmSync(FILE(), { force: true })
-  memo = null
-  resetSpeechProvider()
-  resetEnhanceProvider()
-  return apiKeyStatus()
+export function clearApiKey(id: SecretId): ApiKeyStatus {
+  rmSync(FILE(id), { force: true })
+  memo.set(id, null)
+  invalidate(id)
+  return apiKeyStatus(id)
+}
+
+/**
+ * Drop every cached client that authenticated with the key that just changed.
+ *
+ * Each of these caches a provider holding the OLD key. Missing one leaves that
+ * step authenticating with a key the user has already replaced — which
+ * presents as "I updated my key and it still says rejected".
+ */
+function invalidate(id: SecretId): void {
+  if (id === 'groq') {
+    resetSpeechProvider()
+    resetEnhanceProvider()
+  }
+  // Transform can be pointed at either provider, so it is rebuilt whichever
+  // key moved.
+  resetTransformProvider()
 }

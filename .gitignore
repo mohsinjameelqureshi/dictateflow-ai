@@ -70,11 +70,22 @@ graphify-out/
 # once the command is a bare `graphify` on PATH. Ignored until then.
 .claude/settings.json
 
+# Internal planning docs for the Moonshine work. The spec and its
+# implementation plan were working documents, not project documentation —
+# visitors want README and CLAUDE.md. Purged from history on 2026-08-22.
+DICTATEFLOW-MOONSHINE-INTEGRATION.md
+
+# Brief for updating the marketing site, written to be pasted into that other
+# project. Same category as OPEN-SOURCE-PLAN.md — a working document about the
+# project rather than documentation of it.
+LANDING-PAGE-UPDATE-*.md
+
 # Personal interview prep, not project documentation. Same reasoning as
 # OPEN-SOURCE-PLAN.md above — kept on disk, not published.
 docs/INTERVIEW-DRILL.md
 docs/CODEBASE-GUIDE.md
 docs/moonshine-integration-plan.md
+docs/transform-feature-plan.md
 
 # The safeStorage blob holding the Groq key. It normally lives in userData,
 # but migrate-user-data.ts copies one forward from a legacy app root, so the

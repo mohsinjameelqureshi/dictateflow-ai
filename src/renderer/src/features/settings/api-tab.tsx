@@ -1,8 +1,17 @@
 import { ApiKeyCard } from './api-key-card.js'
 import type { SettingsStore } from './use-settings.js'
 
+/**
+ * Every stored key, in one place.
+ *
+ * Both cards are always shown, whichever engines are selected. This is where
+ * someone goes looking for a key they have already set — hiding the Gemini
+ * card because transforms currently run on Groq would mean the key they saved
+ * last week appears to have vanished.
+ */
 export function ApiTab({ settings }: SettingsStore) {
   const local = settings?.speechProvider === 'moonshine'
+  const transformProvider = settings?.transformProvider ?? 'groq'
 
   return (
     <div className="flex flex-col gap-4">
@@ -13,14 +22,16 @@ export function ApiTab({ settings }: SettingsStore) {
           for where the key went. */}
       {local && (
         <section className="rounded-panel border border-line bg-panel p-5">
-          <h2 className="text-sm font-medium text-ink">No key needed</h2>
+          <h2 className="text-sm font-medium text-ink">No key needed to transcribe</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Moonshine runs on this machine, so there is nothing to sign in to. A
-            Groq key is only used if you switch engines back.
+            Moonshine runs on this machine, so there is nothing to sign in to. A Groq key is only
+            used if you switch engines back
+            {transformProvider === 'groq' ? ', or when a transform runs' : ''}.
           </p>
         </section>
       )}
-      <ApiKeyCard />
+      <ApiKeyCard id="groq" />
+      <ApiKeyCard id="gemini" />
     </div>
   )
 }

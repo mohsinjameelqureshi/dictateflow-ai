@@ -7,6 +7,11 @@ import { Key, keyboard } from '@nut-tree-fork/nut-js'
  *
  * MEASURED (spikes/README.md): 56–120ms end to end against a real Notepad
  * window, and the source window never loses focus.
+ *
+ * Since 1.1.0 this module also lends its pieces to the transform session,
+ * which needs ONE snapshot/restore around a whole read-modify-write cycle
+ * rather than the nested pair `insertText` would give it. Dictation's
+ * behaviour is unchanged; it is now assembled from the exported parts.
  */
 
 /**
@@ -27,12 +32,12 @@ const DEFAULT_RESTORE_DELAY_MS = 150
 const MIN_RESTORE_DELAY_MS = 50
 const MAX_RESTORE_DELAY_MS = 2000
 
-interface ClipboardSnapshot {
+export interface ClipboardSnapshot {
   text: string
   image: NativeImage | null
 }
 
-function snapshot(): ClipboardSnapshot {
+export function snapshotClipboard(): ClipboardSnapshot {
   const image = clipboard.readImage()
   return {
     text: clipboard.readText(),
@@ -42,9 +47,14 @@ function snapshot(): ClipboardSnapshot {
   }
 }
 
-function restore(prev: ClipboardSnapshot, wrote: string): void {
-  // If the user copied something during the paste, theirs wins — do not
-  // stomp a fresh clipboard with a stale snapshot.
+/**
+ * Put the user's clipboard back, unless they have since replaced it.
+ *
+ * `wrote` is the last thing we put there. If the clipboard no longer holds it,
+ * the user copied something during the paste and theirs wins — do not stomp a
+ * fresh clipboard with a stale snapshot.
+ */
+export function restoreClipboard(prev: ClipboardSnapshot, wrote: string): void {
   if (clipboard.readText() !== wrote) return
 
   if (prev.image) clipboard.writeImage(prev.image)
@@ -52,22 +62,56 @@ function restore(prev: ClipboardSnapshot, wrote: string): void {
   else clipboard.clear()
 }
 
+export function clampRestoreDelay(restoreDelayMs?: number): number {
+  return Number.isFinite(restoreDelayMs)
+    ? Math.min(Math.max(restoreDelayMs as number, MIN_RESTORE_DELAY_MS), MAX_RESTORE_DELAY_MS)
+    : DEFAULT_RESTORE_DELAY_MS
+}
+
+/* --------------------------------------------------------- key sends ---- */
+
+const chord = async (...keys: Key[]): Promise<void> => {
+  await keyboard.pressKey(...keys)
+  await keyboard.releaseKey(...keys)
+}
+
+export const sendPaste = (): Promise<void> => chord(Key.LeftControl, Key.V)
+export const sendCopy = (): Promise<void> => chord(Key.LeftControl, Key.C)
+export const sendCut = (): Promise<void> => chord(Key.LeftControl, Key.X)
+export const sendSelectAll = (): Promise<void> => chord(Key.LeftControl, Key.A)
+
+export const settle = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Write text and paste it. No snapshot, no restore — the caller owns those.
+ *
+ * Split out so the transform session can hold one snapshot across a cut, an
+ * LLM round trip and a paste. Nesting `insertText`'s own snapshot inside that
+ * would capture the CUT TEXT as "the user's clipboard" and faithfully restore
+ * it, which is the opposite of the intent.
+ */
+export async function pasteText(text: string): Promise<void> {
+  if (!text) return
+  clipboard.writeText(text)
+  await sendPaste()
+}
+
+/**
+ * The dictation insert path: save the clipboard, paste, give the target time
+ * to read it, then put the clipboard back.
+ */
 export async function insertText(text: string, restoreDelayMs?: number): Promise<void> {
   if (!text) return
 
-  const delay = Number.isFinite(restoreDelayMs)
-    ? Math.min(Math.max(restoreDelayMs as number, MIN_RESTORE_DELAY_MS), MAX_RESTORE_DELAY_MS)
-    : DEFAULT_RESTORE_DELAY_MS
+  const delay = clampRestoreDelay(restoreDelayMs)
+  const previous = snapshotClipboard()
 
-  const previous = snapshot()
-  clipboard.writeText(text)
-
-  await keyboard.pressKey(Key.LeftControl, Key.V)
-  await keyboard.releaseKey(Key.LeftControl, Key.V)
+  await pasteText(text)
 
   setTimeout(() => {
     try {
-      restore(previous, text)
+      restoreClipboard(previous, text)
     } catch {
       // Another process can hold the clipboard open. Not worth surfacing —
       // the text the user asked for is already inserted.
@@ -98,7 +142,7 @@ const PASTE_SETTLE_MS = 60
  * it rejects the paste (§6.4).
  */
 export async function pressEnter(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, PASTE_SETTLE_MS))
+  await settle(PASTE_SETTLE_MS)
   await keyboard.pressKey(Key.Enter)
   await keyboard.releaseKey(Key.Enter)
 }

@@ -10,18 +10,25 @@ import type {
   DictionaryWrite,
   InsightsDto,
   IpcMap,
+  KeyCheck,
   ListDictationsQuery,
   MoonshineModelSize,
   MoonshineProgress,
   MoonshineStatus,
   NewDictationDto,
   NewDictionaryDto,
+  NewTransformDto,
   RecordingsStats,
   ResolvedTheme,
+  SecretId,
   SettingKey,
   Settings,
   SettingsTab,
   TransferResult,
+  TransformDto,
+  TransformModel,
+  TransformProviderId,
+  TransformWrite,
 } from '../shared/types.js'
 
 /** Typed invoke — the channel decides both argument and return type. */
@@ -166,10 +173,49 @@ export const mainApi = {
       return () => ipcRenderer.off(IPC_EVENT.moonshineStatusChanged, listener)
     },
   },
+  /**
+   * Transform rules and the engine behind them.
+   *
+   * `models` is a live call to the provider rather than a constant, so the
+   * picker cannot offer a model that has been retired. It never rejects — each
+   * provider falls back to a small static list.
+   */
+  transforms: {
+    list: (): Promise<TransformDto[]> => invoke(IPC.transformsList),
+    create: (input: NewTransformDto): Promise<TransformWrite> =>
+      invoke(IPC.transformsCreate, input),
+    update: (id: number, input: NewTransformDto): Promise<TransformWrite> =>
+      invoke(IPC.transformsUpdate, { id, ...input }),
+    remove: (id: number): Promise<boolean> => invoke(IPC.transformsDelete, id),
+    models: (provider: TransformProviderId): Promise<TransformModel[]> =>
+      invoke(IPC.transformsModels, provider),
+    /** Fires after a transform runs, so the "used N times" figure stays honest. */
+    onChanged: (cb: () => void): (() => void) => {
+      const listener = () => cb()
+      ipcRenderer.on(IPC_EVENT.transformsChanged, listener)
+      return () => ipcRenderer.off(IPC_EVENT.transformsChanged, listener)
+    },
+  },
+  /**
+   * The stored secrets. Each call names one; the reply carries the id back, so
+   * a card can never render another secret's status.
+   *
+   * The value is never read back into the renderer — `status()` returns whether
+   * one exists, not what it is.
+   */
   apiKey: {
-    status: (): Promise<ApiKeyStatus> => invoke(IPC.apiKeyStatus),
-    set: (key: string): Promise<ApiKeyStatus> => invoke(IPC.apiKeySet, key),
-    clear: (): Promise<ApiKeyStatus> => invoke(IPC.apiKeyClear),
+    status: (id: SecretId): Promise<ApiKeyStatus> => invoke(IPC.apiKeyStatus, id),
+    set: (id: SecretId, key: string): Promise<ApiKeyStatus> =>
+      invoke(IPC.apiKeySet, { id, key }),
+    clear: (id: SecretId): Promise<ApiKeyStatus> => invoke(IPC.apiKeyClear, id),
+    /**
+     * Ask the provider whether the saved key works.
+     *
+     * A network call, so the card saves first and verifies after: a key entered
+     * offline is still saved, and reported as unverified rather than rejected.
+     * Never rejects — a verification that could not run is an answer.
+     */
+    verify: (id: SecretId): Promise<KeyCheck> => invoke(IPC.apiKeyVerify, id),
   },
   app: {
     info: (): Promise<AppInfo> => invoke(IPC.appInfo),

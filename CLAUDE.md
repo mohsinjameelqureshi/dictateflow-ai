@@ -1,9 +1,10 @@
 # DictateFlow AI — Build Specification
 
-**Version** 2.1
-**Updated** 2026-08-07
+**Version** 2.2
+**Updated** 2026-08-22
 **Owner** Mohsin Jameel Qureshi
-**Status** Pre-Phase 1. Transcription pipeline validated. UI not started.
+**Status** Shipped. v1.0.0 released; v1.1.0 adds Transform (§9). Phases 0–6
+complete, Phase 7 (code signing) outstanding.
 
 > This document supersedes the original project document. Every change is
 > based on measured results, not assumption. Sections marked **MEASURED**
@@ -46,6 +47,8 @@ Do not revisit these without new evidence.
 | Authentication    | **None**                           | One user, one local DB file. Nothing to authenticate.      |
 | API key storage   | **Electron `safeStorage`**         | OS-level encryption via Windows Credential Manager         |
 | Cloud database    | **None**                           | SQLite local only                                          |
+| Transform engine  | **Groq or Gemini, one global setting** | Per-rule providers would be two controls per row for a choice nobody makes twice |
+| Key validation    | **Ask the provider, never a prefix** | A prefix is a guess about another company's format. Ours was wrong and failed closed |
 
 ### Why no auth
 
@@ -506,8 +509,17 @@ export const dailyStats = sqliteTable("daily_stats", {
   field is needed.
 - Settings keys: `shortcut`, `microphoneId`, `theme`, `language`,
   `launchOnStartup`, `minimizeToTray`, `typingDelayMs`, `speechProvider`,
-  `enhanceEnabled`, `keepRecordings`, `recordingRetentionDays`.
-- **The API key does not go in this table.** `safeStorage` only.
+  `enhanceEnabled`, `keepRecordings`, `recordingRetentionDays`,
+  `pressEnterCommand`, `moonshineModelSize`, `moonshineLivePreview`,
+  `moonshineHighAccuracyFinal`, `transformProvider`, `transformGroqModel`,
+  `transformGeminiModel`. The canonical list is `SETTING_KEYS` in
+  `shared/types.ts` — this one is prose and can drift.
+- **The API keys do not go in this table.** `safeStorage` only — Groq, and
+  Gemini for Transform.
+- A fifth table, `transforms`, ships in v1.1.0: `id`, `name`, `rule`,
+  `shortcut`, `enabled`, `hitCount`, `sortOrder`, `createdAt`. `name` is
+  deliberately not unique; shortcut uniqueness is stronger than SQLite can
+  express and is enforced in `db/transforms.ts`.
 
 ### Recording storage
 
@@ -557,6 +569,8 @@ Ambiguity here produces meaningless numbers. Fixed definitions:
 - Settings: shortcut, microphone, theme, startup, tray
 - System tray: Open / Settings / Quit
 - Export and import as JSON
+- **v1.1.0** — Transform: LLM rules on text already in the field, on their own
+  tap shortcuts, running on Groq or Gemini
 
 ### Dictionary must ship in v1
 
@@ -568,10 +582,41 @@ observed in testing. It is the highest value-to-effort feature in the app.
 **Ordering matters:** run dictionary replacement **after** the LLM step, not
 before. Otherwise the LLM "corrects" your corrections back into errors.
 
+### Transform — shipped in v1.1.0
+
+Rules that rewrite text ALREADY in the focused field, each bound to its own
+tap shortcut. Press it, the text is taken out, an LLM applies a rule the user
+wrote, and the result is pasted back in place.
+
+It is not part of the dictation pipeline and is not a sibling of the
+dictionary. The dictionary is deterministic, instant and free, and runs inside
+every dictation; a transform is a network round trip the user asks for by name.
+
+Four things that are load-bearing and were each learned the hard way:
+
+1. **The user's text must be recoverable on every failure path.** Past the cut,
+   the only copy lives in a variable in the main process. Every exit either
+   pastes it back or leaves it on screen, and the key check runs BEFORE the cut.
+2. **Tap shortcuts fire on RELEASE.** `uiohook-napi` listens rather than
+   filters, so simulating Ctrl+C while the user still holds Alt sends the app
+   Ctrl+Alt+C.
+3. **No two shortcuts may be subsets of one another.** Keydowns arrive one at a
+   time, so a transform on Ctrl+Win+E is unreachable behind a dictation combo of
+   Ctrl+Win.
+4. **§10's word-loss detector does NOT apply.** A transform is supposed to
+   remove words; the detector would reject every correct answer.
+
+Transforms are counted per rule and deliberately kept out of `dictations` — §8
+defines WPM against recording duration, and a transform has no recording.
+
 ### Deferred
 
-Grammar enhancement toggle (default off), voice commands, writing modes,
-translation, clipboard history, local provider, cloud sync.
+Writing modes, translation, clipboard history, cloud sync, a local transform
+engine (the provider interface already allows one).
+
+Shipped since this list was written: grammar enhancement toggle (default off,
+Experimental), the "press enter" voice command (Experimental), and the local
+speech provider (Moonshine).
 
 ### Explicitly not building
 

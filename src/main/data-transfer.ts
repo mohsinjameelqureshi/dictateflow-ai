@@ -12,10 +12,12 @@ import {
   type BackupDictation,
   type BackupFile,
   type BackupRule,
+  type BackupTransform,
   type SettingKey,
   type Settings,
   type TransferResult,
 } from '../shared/types.js'
+import { importTransform } from '../db/transforms.js'
 import { readSetting, readSettings, writeSetting } from './settings.js'
 import { onShortcutChanged } from './shortcut/index.js'
 import { applyLoginItem } from './startup.js'
@@ -29,8 +31,8 @@ import { applyTheme } from './theme.js'
  * salvage if this app ever stops running.
  *
  * Two things are deliberately NOT in the file:
- *   - the Groq API key, which lives in safeStorage and never touches disk in
- *     plaintext (§2);
+ *   - the API keys — Groq and Gemini — which live in safeStorage and never
+ *     touch disk in plaintext (§2). Two secrets does not soften that rule;
  *   - `dailyStats`, which is derived — it is rebuilt after import rather than
  *     restored, so a stale or hand-edited number cannot poison the heatmap.
  */
@@ -44,6 +46,7 @@ function fileName(): string {
 export async function exportData(parent: BrowserWindow | null): Promise<TransferResult> {
   const dictations = getDb().select().from(schema.dictations).all()
   const dictionary = getDb().select().from(schema.dictionary).all()
+  const transforms = getDb().select().from(schema.transforms).all()
 
   const payload: BackupFile = {
     app: BACKUP_APP,
@@ -66,6 +69,14 @@ export async function exportData(parent: BrowserWindow | null): Promise<Transfer
       grammarFixes: r.grammarFixes,
       dictionaryFixes: r.dictionaryFixes,
       favorite: r.favorite,
+      createdAt: r.createdAt.getTime(),
+    })),
+    transforms: transforms.map((r) => ({
+      name: r.name,
+      rule: r.rule,
+      shortcut: r.shortcut,
+      enabled: r.enabled,
+      hitCount: r.hitCount,
       createdAt: r.createdAt.getTime(),
     })),
   }
@@ -94,6 +105,7 @@ export async function exportData(parent: BrowserWindow | null): Promise<Transfer
     path: result.filePath,
     dictations: payload.dictations.length,
     dictionary: payload.dictionary.length,
+    transforms: payload.transforms?.length ?? 0,
     skipped: 0,
   }
 }
@@ -162,6 +174,25 @@ function parseBackup(raw: string): BackupFile | string {
     }))
     .filter((r) => r.from && r.to)
 
+  // Absent in any file written before 1.1.0, which is why the field is
+  // optional rather than the format being bumped — see BackupFile.
+  const transforms: BackupTransform[] = (
+    Array.isArray(data['transforms']) ? data['transforms'] : []
+  )
+    .filter(isObject)
+    .map((t) => ({
+      name: str(t['name']).trim(),
+      rule: str(t['rule']).trim(),
+      shortcut: str(t['shortcut']).trim(),
+      // Defaults to enabled only when the field is genuinely absent. An
+      // explicit `false` has to survive, or importing a backup would silently
+      // re-arm a shortcut the user turned off.
+      enabled: t['enabled'] === undefined ? true : bool(t['enabled']),
+      hitCount: Math.max(0, num(t['hitCount'])),
+      createdAt: num(t['createdAt'], Date.now()),
+    }))
+    .filter((t) => t.name && t.rule)
+
   const settings: Settings = {}
   const rawSettings = isObject(data['settings']) ? data['settings'] : {}
   for (const key of SETTING_KEYS) {
@@ -176,6 +207,7 @@ function parseBackup(raw: string): BackupFile | string {
     settings,
     dictionary,
     dictations,
+    transforms,
   }
 }
 
@@ -209,6 +241,7 @@ export async function importData(parent: BrowserWindow | null): Promise<Transfer
   const db = getDb()
   let addedDictations = 0
   let addedRules = 0
+  let addedTransforms = 0
   let skipped = 0
 
   try {
@@ -279,6 +312,15 @@ export async function importData(parent: BrowserWindow | null): Promise<Transfer
         addedRules += 1
       }
     })
+
+    // Outside the transaction above on purpose: `importTransform` re-reads the
+    // table to check for a shortcut clash, and it has to see the rules it has
+    // already inserted in this same import. Two backups sharing a combo would
+    // otherwise both keep it, and one of them would silently never fire.
+    for (const t of parsed.transforms ?? []) {
+      if (importTransform(t)) addedTransforms += 1
+      else skipped += 1
+    }
   } catch (err) {
     return { status: 'error', problem: message(err, 'Could not import that backup.') }
   }
@@ -290,7 +332,7 @@ export async function importData(parent: BrowserWindow | null): Promise<Transfer
 
   // Settings that are more than a stored string have to be re-applied, or the
   // restored shortcut would not take effect until the next launch.
-  onShortcutChanged(readSetting('shortcut'))
+  onShortcutChanged()
   applyLoginItem(readSetting('launchOnStartup') === 'true')
   applyTheme(readSetting('theme'))
 
@@ -303,6 +345,7 @@ export async function importData(parent: BrowserWindow | null): Promise<Transfer
     path,
     dictations: addedDictations,
     dictionary: addedRules,
+    transforms: addedTransforms,
     skipped,
   }
 }

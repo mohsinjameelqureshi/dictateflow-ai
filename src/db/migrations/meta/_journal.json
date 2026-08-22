@@ -15,6 +15,27 @@
       "when": 1786116689160,
       "tag": "0001_melodic_donald_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787343530456,
+      "tag": "0002_useful_ben_urich",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787347232523,
+      "tag": "0003_enhance_prompt_rule",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787379626650,
+      "tag": "0004_first_person_rule",
+      "breakpoints": true
     }
   ]
 }

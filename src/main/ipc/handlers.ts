@@ -8,13 +8,24 @@ import {
   setFavorite,
 } from '../../db/dictations.js'
 import { createRule, deleteRule, listDictionary, updateRule } from '../../db/dictionary.js'
+import {
+  createTransform,
+  deleteTransform,
+  listTransforms,
+  updateTransform,
+} from '../../db/transforms.js'
 import { getInsights, rebuildDailyStats } from '../../db/stats.js'
-import { broadcastDictationsChanged, broadcastSettings } from '../broadcast.js'
+import {
+  broadcastDictationsChanged,
+  broadcastSettings,
+  broadcastTransformsChanged,
+} from '../broadcast.js'
 import { exportData, importData } from '../data-transfer.js'
 import { applyLoginItem } from '../startup.js'
 import { applyTheme, resolvedTheme } from '../theme.js'
 import { IPC } from '../../shared/ipc-channels.js'
 import {
+  TRANSFORM_PROVIDERS,
   type ApiKeyStatus,
   type AppInfo,
   type AudioInputDevice,
@@ -24,19 +35,27 @@ import {
   type DictionaryWrite,
   type InsightsDto,
   type IpcMap,
+  type KeyCheck,
   type ListDictationsQuery,
   type MoonshineModelSize,
   type MoonshineStatus,
   type NewDictationDto,
   type NewDictionaryDto,
   type RecordingsStats,
+  type NewTransformDto,
   type ResolvedTheme,
+  type SecretId,
   type SettingKey,
   type Settings,
   type SettingsTab,
   type TransferResult,
+  type TransformDto,
+  type TransformModel,
+  type TransformProviderId,
+  type TransformWrite,
 } from '../../shared/types.js'
-import { apiKeyStatus, clearApiKey, setApiKey } from '../secrets.js'
+import { listTransformModels, verifySecretKey } from '../../services/transform/index.js'
+import { apiKeyStatus, clearApiKey, getSecret, setApiKey } from '../secrets.js'
 import { listAudioInputs, onAudioInputsChanged, receiveAudioInputs } from '../audio/devices.js'
 import { clearRecordings, recordingsSize } from '../audio/store.js'
 import { session } from '../dictation/session.js'
@@ -49,7 +68,11 @@ import {
   unloadModel,
 } from '../moonshine/host.js'
 import { readSettings, writeSetting } from '../settings.js'
-import { onShortcutChanged, setShortcutSuspended } from '../shortcut/index.js'
+import {
+  onShortcutChanged,
+  refreshTransformBindings,
+  setShortcutSuspended,
+} from '../shortcut/index.js'
 import { openSettings } from '../windows/main-window.js'
 
 /**
@@ -116,9 +139,19 @@ export function registerIpcHandlers(): void {
 
   /* --------------------------------------------------------- api key ---- */
 
-  handle(IPC.apiKeyStatus, (): ApiKeyStatus => apiKeyStatus())
-  handle(IPC.apiKeySet, (key: string): ApiKeyStatus => setApiKey(key))
-  handle(IPC.apiKeyClear, (): ApiKeyStatus => clearApiKey())
+  // Keyed: one handler serves both the Groq key and the Gemini key, and the
+  // id travels back in the reply so a card can never render another's status.
+  handle(IPC.apiKeyStatus, (id: SecretId): ApiKeyStatus => apiKeyStatus(id))
+  handle(IPC.apiKeySet, ({ id, key }: { id: SecretId; key: string }): ApiKeyStatus =>
+    setApiKey(id, key),
+  )
+  handle(IPC.apiKeyClear, (id: SecretId): ApiKeyStatus => clearApiKey(id))
+
+  // Replaces the prefix guess that used to live in `setApiKey`. The provider
+  // is the only party that knows what a valid key looks like, so it is asked.
+  handle(IPC.apiKeyVerify, (id: SecretId): Promise<KeyCheck> =>
+    verifySecretKey(id, getSecret(id)),
+  )
 
   /* ---------------------------------------------------------- widget ---- */
 
@@ -184,8 +217,13 @@ export function registerIpcHandlers(): void {
 
   handle(IPC.dataImport, async (_arg, event): Promise<TransferResult> => {
     const result = await importData(senderWindow(event))
-    // History, insights and the dictionary are all stale now.
-    if (result.status === 'done') broadcastDictationsChanged()
+    if (result.status === 'done') {
+      // History, insights and the dictionary are all stale now.
+      broadcastDictationsChanged()
+      broadcastTransformsChanged()
+      // An imported rule can arrive with a combo, so the hook has to learn it.
+      refreshTransformBindings()
+    }
     return result
   })
 
@@ -245,6 +283,38 @@ export function registerIpcHandlers(): void {
     removeModel(size),
   )
 
+  /* ------------------------------------------------------- transform ---- */
+
+  handle(IPC.transformsList, (): TransformDto[] => listTransforms())
+
+  // Every write re-arms the global hook. A rule saved with a new combo that
+  // does not fire until the next launch is a rule the user will conclude is
+  // broken — and they would be right.
+  handle(IPC.transformsCreate, (input: NewTransformDto): TransformWrite => {
+    const result = createTransform(input)
+    if (result.ok) refreshTransformBindings()
+    return result
+  })
+
+  handle(IPC.transformsUpdate, ({ id, ...input }: { id: number } & NewTransformDto): TransformWrite => {
+    const result = updateTransform(id, input)
+    if (result.ok) refreshTransformBindings()
+    return result
+  })
+
+  handle(IPC.transformsDelete, (id: number): boolean => {
+    const removed = deleteTransform(id)
+    if (removed) refreshTransformBindings()
+    return removed
+  })
+
+  // Asked of the provider rather than hardcoded, so the picker cannot offer a
+  // model that has been retired. Never throws — each provider falls back to a
+  // small static list, because a picker with nothing in it is unusable.
+  handle(IPC.transformsModels, (id: TransformProviderId): Promise<TransformModel[]> =>
+    listTransformModels(id, getSecret(TRANSFORM_PROVIDERS[id]?.secret ?? 'groq')),
+  )
+
   /* ------------------------------------------------------- clipboard ---- */
 
   // §6.4's insert path snapshots and restores the clipboard around a paste.
@@ -289,8 +359,11 @@ function warmSelectedModel(): void {
 function applySettingEffect(key: SettingKey, value: string): void {
   switch (key) {
     case 'shortcut':
-      // The hook holds a parsed combo, so it has to be told.
-      onShortcutChanged(value)
+      // The hook holds parsed combos, so it has to be told. It also re-reads
+      // the transform bindings while it is there — a dictation combo that now
+      // contains a transform's combo would make that transform unreachable,
+      // and the rebuilt set is sorted most-specific-first to soften it.
+      onShortcutChanged()
       return
     case 'launchOnStartup':
       applyLoginItem(value === 'true')

@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button.js'
 import { cn } from '@/lib/utils.js'
-import { codeToKeyName, keyLabel, normalizeShortcut, parseShortcut, validateShortcut } from '@shared/shortcut.js'
+import {
+  codeToKeyName,
+  findShortcutConflict,
+  keyLabel,
+  normalizeShortcut,
+  parseShortcut,
+  validateShortcut,
+  type ShortcutClaim,
+  type ShortcutMode,
+} from '@shared/shortcut.js'
 import { KeyCap } from './parts.js'
 
 /**
- * Records a hold-to-talk combo from real key presses.
+ * Records a key combo from real key presses — the hold-to-talk one, or a
+ * transform's.
  *
  * Two things make this more than an input box:
  *
@@ -17,12 +27,29 @@ import { KeyCap } from './parts.js'
  *      still down at the end. Releases arrive in whatever order the fingers
  *      lift, so reading the tail would record "Ctrl" when the user held
  *      "Ctrl+Shift+Space".
+ *
+ * `mode` decides which shapes are legal, not how the field behaves — recording
+ * is identical either way. A HOLD combo may be two bare modifiers; a TAP combo
+ * may not, because it would fire on the way to every other shortcut starting
+ * the same way. See shared/shortcut.ts.
+ *
+ * `claims` are the combos already spoken for. Checked here for the message and
+ * again in the main process for the data, against the same shared function —
+ * the renderer's list can be one edit out of date, and the process that owns
+ * the hook is the one that gets to say no.
  */
 export function ShortcutField({
   value,
+  mode = 'hold',
+  claims = [],
+  allowEmpty = false,
   onSave,
 }: {
   value: string
+  mode?: ShortcutMode
+  claims?: readonly ShortcutClaim[]
+  /** Whether the field offers a Clear button. A transform may be unbound. */
+  allowEmpty?: boolean
   onSave: (combo: string) => void
 }) {
   const [capturing, setCapturing] = useState(false)
@@ -37,6 +64,11 @@ export function ShortcutField({
   // suspend/resume the hook mid-capture and drop the held-key set.
   const save = useRef(onSave)
   save.current = onSave
+
+  // Same treatment, same reason: re-running the capture effect because the
+  // parent re-rendered would suspend/resume the hook mid-press.
+  const context = useRef({ mode, claims })
+  context.current = { mode, claims }
 
   useEffect(() => {
     if (!capturing) return
@@ -57,7 +89,9 @@ export function ShortcutField({
       const combo = normalizeShortcut(best.current)
       best.current = []
 
-      const reason = validateShortcut(combo)
+      const reason =
+        validateShortcut(combo, context.current.mode) ??
+        findShortcutConflict(combo, context.current.claims)
       if (reason) {
         // Stay in capture so the next attempt needs no second click.
         setProblem(reason)
@@ -136,7 +170,7 @@ export function ShortcutField({
             keys.map((k) => <KeyCap key={k}>{keyLabel(k)}</KeyCap>)
           ) : (
             <span className="text-[13px] text-ink-muted">
-              {capturing ? 'Hold the keys you want' : 'Not set'}
+              {!capturing ? 'Not set' : mode === 'hold' ? 'Hold the keys you want' : 'Press the keys you want'}
             </span>
           )}
         </div>
@@ -146,14 +180,25 @@ export function ShortcutField({
           variant={capturing ? 'primary' : 'secondary'}
           onClick={() => setCapturing((c) => !c)}
         >
-          {capturing ? 'Cancel' : 'Change'}
+          {capturing ? 'Cancel' : keys.length > 0 ? 'Change' : 'Set'}
         </Button>
+
+        {/* Only where being unbound is a real state. Dictation without a
+            shortcut is an app that cannot be used; a transform without one is
+            a rule the user is still writing. */}
+        {allowEmpty && !capturing && keys.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => save.current('')}>
+            Clear
+          </Button>
+        )}
       </div>
 
       {problem ? (
         <p className="max-w-72 text-right text-[13px] text-danger">{problem}</p>
       ) : capturing ? (
-        <p className="text-right text-[13px] text-ink-muted">Release to set. Esc to cancel.</p>
+        <p className="text-right text-[13px] text-ink-muted">
+          {mode === 'hold' ? 'Release to set. Esc to cancel.' : 'Press a combo. Esc to cancel.'}
+        </p>
       ) : null}
     </div>
   )

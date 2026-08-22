@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { Ban, Check, Loader2, Mic, MicOff, TimerReset, TriangleAlert, WifiOff } from 'lucide-react'
+import {
+  Ban,
+  Check,
+  Loader2,
+  Mic,
+  MicOff,
+  TextCursorInput,
+  TimerReset,
+  TriangleAlert,
+  WandSparkles,
+  WifiOff,
+} from 'lucide-react'
 import type { WidgetState, WidgetStatePayload } from '@shared/types.js'
 import { useTheme } from '@/lib/theme.js'
 import { listAudioInputs } from './devices.js'
@@ -7,9 +18,14 @@ import { Recorder } from './recorder.js'
 import { Waveform } from './waveform.js'
 
 /**
- * All nine states from §11, plus the generic error. Copy follows §12:
- * sentence case, active voice, says what happened — never apologises, never
- * vague.
+ * All nine states from §11, the three transform states, and the generic error.
+ * Copy follows §12: sentence case, active voice, says what happened — never
+ * apologises, never vague.
+ *
+ * `transforming` is absent because its label is the RULE'S NAME, which arrives
+ * on the payload. The user can have several rules on several combos, so
+ * "Transforming…" would not tell them which one fired — and firing the wrong
+ * one is the mistake worth catching before the paste lands.
  */
 const COPY: Partial<Record<WidgetState, string>> = {
   processing: 'Transcribing…',
@@ -19,11 +35,15 @@ const COPY: Partial<Record<WidgetState, string>> = {
   offline: 'No connection',
   'rate-limited': 'Rate limited. Try again',
   blocked: "Can't type into this window",
+  transformed: 'Transformed',
+  'no-text': 'Nothing to transform',
 }
 
 const TONE: Partial<Record<WidgetState, string>> = {
   success: 'text-success',
+  transformed: 'text-success',
   'no-speech': 'text-ink-muted',
+  'no-text': 'text-ink-muted',
   offline: 'text-danger',
   'rate-limited': 'text-danger',
   blocked: 'text-danger',
@@ -49,6 +69,14 @@ function Icon({ state }: { state: WidgetState }) {
       return <TimerReset className={`${cls} text-danger`} />
     case 'blocked':
       return <Ban className={`${cls} text-danger`} />
+    // The same mark the sidebar's Transform entry uses, so the widget says
+    // which of the app's two jobs is happening without needing a word for it.
+    case 'transforming':
+      return <WandSparkles className={`${cls} animate-pulse text-accent`} />
+    case 'transformed':
+      return <Check className={`${cls} text-success`} />
+    case 'no-text':
+      return <TextCursorInput className={`${cls} text-ink-subtle`} />
     default:
       return <TriangleAlert className={`${cls} text-danger`} />
   }
@@ -129,10 +157,15 @@ export function Widget() {
     [recorder],
   )
 
-  const { state, message } = payload
+  const { state, message, detail } = payload
   // `listening` renders a waveform instead of text, and `cancelled` is
   // invisible — both are absent from COPY on purpose.
-  const label = state === 'error' ? (message ?? 'Something went wrong') : (COPY[state] ?? '')
+  const label =
+    state === 'error'
+      ? (message ?? 'Something went wrong')
+      : state === 'transforming'
+        ? `${detail ?? 'Transforming'}…`
+        : (COPY[state] ?? '')
 
   return (
     <div className="flex h-screen w-screen items-center justify-center p-1">

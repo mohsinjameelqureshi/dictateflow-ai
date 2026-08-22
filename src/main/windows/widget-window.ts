@@ -18,8 +18,16 @@ import type { IpcEventMap } from '../../shared/types.js'
  * spikes/README.md comes from.
  */
 
-/** Sized to the compact pill + waveform, not the old 280px bar. */
-const WIDGET_W = 150
+/**
+ * Sized to the compact pill + waveform, not the old 280px bar.
+ *
+ * Widened from 150 in 1.1.0. The pill inside is `w-fit`, so this is a CEILING
+ * rather than a size — dictation still renders exactly as narrow as it did.
+ * What changed is that a transform's label is the rule's own name ("Enhance
+ * prompt…"), and at 150 every name past about twelve characters was truncated
+ * to an ellipsis, which defeats the reason the name is shown at all.
+ */
+const WIDGET_W = 240
 const WIDGET_H = 52
 
 /** Gap from the work-area edge — NOT from the screen edge. That is the point. */

@@ -20,6 +20,9 @@ export const SETTING_KEYS = [
   'moonshineModelSize',
   'moonshineLivePreview',
   'moonshineHighAccuracyFinal',
+  'transformProvider',
+  'transformGroqModel',
+  'transformGeminiModel',
 ] as const
 
 export type SettingKey = (typeof SETTING_KEYS)[number]
@@ -47,6 +50,23 @@ export const DEFAULT_SETTINGS: Record<SettingKey, string> = {
   moonshineModelSize: 'medium', // beats Whisper Large v3 at 245M params
   moonshineLivePreview: 'true',
   moonshineHighAccuracyFinal: 'true',
+  // Transform (docs/transform-feature-plan.md). One engine for every rule,
+  // deliberately: the transcription engine works the same way, and a per-rule
+  // provider means two more controls on every row for a choice nobody makes
+  // twice. Groq is the default because a working install already has that key.
+  transformProvider: 'groq',
+  transformGroqModel: 'llama-3.3-70b-versatile',
+  // MEASURED, not picked from a docs page. 690ms with thinking disabled, 1.57s
+  // with it, against the seeded rule and a one-sentence input.
+  //
+  // `gemini-flash-latest` was the obvious choice — an alias that tracks the
+  // current model can never go stale, which is exactly the failure this file
+  // keeps having. It was tested and rejected: it returned 503 "high demand" on
+  // the first call, took 10.5s on the second, and ignored a zero thinking
+  // budget while doing it. An alias inherits whatever Google considers current,
+  // and current is tuned for reasoning, not for a rewrite someone is watching a
+  // spinner for.
+  transformGeminiModel: 'gemini-2.5-flash',
 }
 
 /* ---------------------------------------------------------- moonshine ---- */
@@ -289,6 +309,21 @@ export interface BackupRule {
   createdAt: number
 }
 
+/**
+ * A transform rule, as it travels. Added in 1.1.0 WITHOUT bumping
+ * `BACKUP_FORMAT`: the field is additive, an older build ignores what it does
+ * not know, and a backup made yesterday has to keep importing tomorrow. That
+ * is the one promise the export feature makes.
+ */
+export interface BackupTransform {
+  name: string
+  rule: string
+  shortcut: string
+  enabled: boolean
+  hitCount: number
+  createdAt: number
+}
+
 export interface BackupFile {
   app: typeof BACKUP_APP
   format: number
@@ -296,6 +331,8 @@ export interface BackupFile {
   settings: Settings
   dictionary: BackupRule[]
   dictations: BackupDictation[]
+  /** Absent in any file written before 1.1.0. Treated as an empty list. */
+  transforms?: BackupTransform[]
 }
 
 export type TransferResult =
@@ -306,6 +343,7 @@ export type TransferResult =
       path: string
       dictations: number
       dictionary: number
+      transforms: number
       /** Import only: rows already present, so not added twice. */
       skipped: number
     }
@@ -377,6 +415,228 @@ export function validateRule(from: string, to: string): string | null {
   return null
 }
 
+/* ----------------------------------------------------------- transform ---- */
+
+/**
+ * Transform — an LLM rewrite of text that is ALREADY in the focused field,
+ * triggered by its own shortcut. See docs/transform-feature-plan.md.
+ *
+ * It is not part of the dictation pipeline and deliberately not a sibling of
+ * the dictionary. The dictionary is deterministic, instant and free; a
+ * transform is a network round trip that rewrites whatever it is handed. They
+ * share a page in the sidebar because they are both "rules", and nothing else.
+ */
+
+export type TransformProviderId = 'groq' | 'gemini'
+
+export interface TransformProviderSpec {
+  id: TransformProviderId
+  label: string
+  /** Which stored secret it authenticates with. */
+  secret: SecretId
+  /** The settings key holding the chosen model for this provider. */
+  modelKey: SettingKey
+  hint: string
+}
+
+export const TRANSFORM_PROVIDERS: Record<TransformProviderId, TransformProviderSpec> = {
+  groq: {
+    id: 'groq',
+    label: 'Groq',
+    secret: 'groq',
+    modelKey: 'transformGroqModel',
+    hint: 'Fastest. Uses the same key as transcription, so there is nothing extra to set up.',
+  },
+  gemini: {
+    id: 'gemini',
+    label: 'Google Gemini',
+    secret: 'gemini',
+    modelKey: 'transformGeminiModel',
+    hint: 'Stronger on long rewrites. Needs its own free key from Google AI Studio.',
+  },
+}
+
+export const TRANSFORM_PROVIDER_IDS: TransformProviderId[] = ['groq', 'gemini']
+
+export function isTransformProvider(value: string): value is TransformProviderId {
+  return (TRANSFORM_PROVIDER_IDS as string[]).includes(value)
+}
+
+/** One entry in the model picker. `id` is what goes on the wire to the provider. */
+export interface TransformModel {
+  id: string
+  label: string
+}
+
+/**
+ * The models offered when the provider's own list cannot be fetched — no key
+ * yet, no network, or the endpoint changed shape.
+ *
+ * Deliberately a FALLBACK and never the primary source. A hardcoded list of
+ * model ids is wrong within months, and a picker offering a model the provider
+ * has retired fails at the moment the user is trying to get work done.
+ */
+export const FALLBACK_TRANSFORM_MODELS: Record<TransformProviderId, TransformModel[]> = {
+  groq: [
+    { id: 'llama-3.3-70b-versatile', label: 'llama-3.3-70b-versatile' },
+    { id: 'llama-3.1-8b-instant', label: 'llama-3.1-8b-instant' },
+  ],
+  gemini: [
+    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
+    { id: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite' },
+    { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
+  ],
+}
+
+/**
+ * Model families that answer `generateContent` but cannot usefully rewrite text.
+ *
+ * MEASURED against the live model list, not guessed. Google returns image
+ * generation (`nano-banana-pro-preview`, `*-image`), music (`lyria-*`),
+ * robotics (`gemini-robotics-er-*`), computer use, research agents and native
+ * audio models on the same endpoint, all advertising `generateContent` and all
+ * carrying the same metadata shape as a chat model — there is no structural
+ * field that separates them, so the name is the only signal available.
+ *
+ * This is a BLOCKLIST and blocklists rot. It rotted once already: the first
+ * version knew about embedding, imagen, veo and TTS, and let image, music and
+ * robotics models through into a text-rewrite picker. Assume it will rot again.
+ *
+ * That is survivable because it is not the last line of defence — picking a
+ * model that cannot rewrite text produces an honest widget error, not silence.
+ * Keep this list as a convenience, never as a guarantee.
+ */
+/**
+ * Put the models we would actually recommend at the top of the picker.
+ *
+ * The list used to be a plain `.sort()`, and alphabetical order put Groq's
+ * `allam-2-7b` — a 7B Arabic-focused model — at the very top. A user picked it,
+ * because the first item in a list is what people pick, and got a transform
+ * that handed their text straight back.
+ *
+ * Alphabetical is not neutral. It is an opinion about which model matters most,
+ * expressed accidentally, and on this list it was the wrong one. The fallback
+ * table is already the app's stated recommendation, so it becomes the order:
+ * those ids first, in their listed order, then everything else alphabetically.
+ *
+ * Nothing is hidden. A model that is not recommended is still one scroll away —
+ * ordering is a suggestion, and blocklisting by name is the mistake this file
+ * has already made twice (see NON_TEXT_MODEL_PATTERN).
+ */
+export function orderTransformModels(
+  ids: string[],
+  provider: TransformProviderId,
+): TransformModel[] {
+  const preferred = FALLBACK_TRANSFORM_MODELS[provider].map((m) => m.id)
+  const rank = (id: string): number => {
+    const at = preferred.indexOf(id)
+    return at === -1 ? preferred.length : at
+  }
+  return [...ids]
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .map((id) => ({ id, label: id }))
+}
+
+export const NON_TEXT_MODEL_PATTERN =
+  /embedding|aqa|imagen|veo|lyria|nano-banana|robotics|computer-use|deep-research|antigravity|image|tts|audio/i
+
+/** Wire-safe transform rule. `createdAt` is epoch ms, not a Date. */
+export interface TransformDto {
+  id: number
+  name: string
+  /** The user's instruction. It becomes part of the system prompt, never the user turn. */
+  rule: string
+  /** uiohook key names joined by '+', same wire format as `shortcut`. '' = unbound. */
+  shortcut: string
+  enabled: boolean
+  hitCount: number
+  sortOrder: number
+  createdAt: number
+}
+
+export interface NewTransformDto {
+  name: string
+  rule: string
+  shortcut: string
+  enabled?: boolean
+}
+
+/**
+ * Writes answer with a reason instead of rejecting, for the same reason
+ * `DictionaryWrite` does: a shortcut clash is an expected answer, not an
+ * exception, and "Error invoking remote method" is not copy §12 would allow.
+ */
+export type TransformWrite =
+  | { ok: true; entry: TransformDto }
+  | { ok: false; problem: string }
+
+/** Longest rule worth sending. Past this it is a document, not an instruction. */
+export const MAX_TRANSFORM_RULE = 4000
+
+/** Shared by the form and the IPC handler, so the two cannot disagree. */
+export function validateTransform(name: string, rule: string): string | null {
+  if (!name.trim()) return 'Give the transform a name.'
+  if (!rule.trim()) return 'Write the rule this transform should follow.'
+  if (rule.trim().length > MAX_TRANSFORM_RULE) {
+    return `Keep the rule under ${MAX_TRANSFORM_RULE} characters.`
+  }
+  return null
+}
+
+/**
+ * The rule seeded on first run (docs/transform-feature-plan.md §3.1).
+ *
+ * Exported so the migration, the docs and the "restore the default" affordance
+ * all quote the same text rather than three drifting copies.
+ */
+export const DEFAULT_TRANSFORM_NAME = 'Enhance prompt'
+export const DEFAULT_TRANSFORM_SHORTCUT = 'Ctrl+Alt+E'
+/**
+ * MEASURED failure, and the reason this text reads the way it does.
+ *
+ * The first version ended "If the text is already a good prompt, return it
+ * close to unchanged." Both Groq and Gemini returned a dictated request
+ * VERBATIM — every word identical, including the spoken-English slips. The
+ * models were not disobeying. A dictated request that states a goal and asks a
+ * question genuinely reads as "already a good prompt", so the rule's own escape
+ * hatch was the correct branch to take, and a transform that changes nothing is
+ * indistinguishable from one that never ran.
+ *
+ * The mistake was importing §4's caution into a step it does not apply to. §4
+ * is about grammar cleanup, which is only allowed to fix grammar and was caught
+ * deleting words. A transform is asked to restructure — hedging against change
+ * removes the only thing it does.
+ *
+ * So: restructuring is now mandatory and stated twice, the escape hatch is
+ * gone, and the output has a required SHAPE. A shape is what makes "did it
+ * work?" answerable at a glance.
+ */
+export const DEFAULT_TRANSFORM_RULE = [
+  'Rewrite the text as a clear, well-structured prompt for an AI assistant.',
+  '',
+  'Always restructure it. Never return the text unchanged or nearly unchanged,',
+  'even if it already reads well — reshaping it is the entire purpose of this',
+  'rewrite, and returning it as-is is a failure.',
+  '',
+  'The text was dictated aloud, so fix the grammar, the false starts and the',
+  'half-finished sentences that come from speaking rather than typing.',
+  '',
+  'Write it in the first person, as the author speaking. Never describe them',
+  'from the outside — no "the user is", no "the author wants". This goes',
+  'straight into their chat box as their own words.',
+  '',
+  'Produce, in this order:',
+  '- one sentence stating exactly what is being asked for',
+  '- any background they gave about themselves or their situation, in their voice',
+  '- a short bulleted list of what the answer must cover, one bullet per thing',
+  '  they asked about',
+  '',
+  'Keep every requirement, constraint, name, number and piece of context the',
+  'author gave. Add no requirement they did not state. Never answer the request',
+  'itself. Return only the rewritten prompt.',
+].join('\n')
+
+
 export interface AppInfo {
   version: string
   electron: string
@@ -404,11 +664,24 @@ export type WidgetState =
   | 'blocked'
   | 'cancelled'
   | 'error'
+  /* Transform (docs/transform-feature-plan.md §8). Three states rather than
+     reusing `processing`/`success`, because the widget is the only feedback
+     the user gets and "Transcribing…" during a transform is a lie. Every OTHER
+     failure state above is reused verbatim — a 429 is a 429. */
+  | 'transforming'
+  | 'no-text'
+  | 'transformed'
 
 export interface WidgetStatePayload {
   state: WidgetState
   /** Only read for `error`. The other states have fixed copy (§12). */
   message?: string
+  /**
+   * The transform's name, for `transforming`. The user can have several rules
+   * bound to several combos, so "Transforming…" would not tell them which one
+   * fired — and firing the wrong one is the mistake worth catching early.
+   */
+  detail?: string
 }
 
 /** main -> widget. `cancel` discards the buffer; `stop` returns it. */
@@ -436,7 +709,77 @@ export interface ClipPayload {
 export const MIN_CLIP_MS = 400
 export const MIN_CLIP_PEAK = 0.01
 
+/**
+ * The secrets the app can hold. Both are stored through `safeStorage` and
+ * neither is ever written to the settings table or an export (§2).
+ *
+ * Gemini exists only because Transform can use it. Transcription is still Groq
+ * or the local engine, and nothing here changes that.
+ */
+export type SecretId = 'groq' | 'gemini'
+
+export interface SecretSpec {
+  id: SecretId
+  label: string
+  /**
+   * Placeholder text for the field. A HINT, not a rule.
+   *
+   * This used to be a `prefix` that `setApiKey` rejected on, and that was a
+   * bug: it was written from memory as `AIza` for Gemini, and Google also
+   * issues keys beginning `AQ.` — so a perfectly valid key was refused with a
+   * confident message telling the user their key was malformed. Guessing at a
+   * credential's shape is guessing at another company's release schedule, and
+   * losing that guess fails CLOSED, which is the worst way to be wrong.
+   *
+   * Validity is decided by ASKING the provider (`apiKey:verify`), which is the
+   * only party that can actually answer.
+   */
+  hint: string
+  /** Where the user gets one. Shown as text — the settings window opens no links. */
+  console: string
+}
+
+export const SECRETS: Record<SecretId, SecretSpec> = {
+  groq: {
+    id: 'groq',
+    label: 'Groq API key',
+    hint: 'gsk_…',
+    console: 'console.groq.com',
+  },
+  gemini: {
+    id: 'gemini',
+    label: 'Gemini API key',
+    // Both formats are live. MEASURED against the API, not remembered.
+    hint: 'AQ.… or AIza…',
+    console: 'aistudio.google.com/apikey',
+  },
+}
+
+/**
+ * The shortest thing that could plausibly be a key.
+ *
+ * Deliberately loose. It catches an empty field and a stray word; it does not
+ * try to RECOGNISE a key, because that is what verification is for and what
+ * the prefix check got wrong.
+ */
+export const MIN_API_KEY_LENGTH = 20
+
+/**
+ * What happened when we asked a provider whether a key works.
+ *
+ * `unreachable` is a distinct answer from `rejected`, and the distinction is
+ * the whole point: a key saved on a train is not a bad key, and telling the
+ * user it was rejected would send them off to regenerate a credential that is
+ * perfectly fine.
+ */
+export type KeyCheck =
+  | { state: 'ok' }
+  | { state: 'rejected'; problem: string }
+  | { state: 'unreachable'; problem: string }
+
 export interface ApiKeyStatus {
+  /** Which secret this describes. Present so one handler can serve both. */
+  id: SecretId
   present: boolean
   /** Whether the OS actually offers encryption. False means we refuse to store. */
   encryptionAvailable: boolean
@@ -445,7 +788,14 @@ export interface ApiKeyStatus {
 /* ----------------------------------------------------------- settings ---- */
 
 /** Tabs in the settings dialog's own rail. */
-export type SettingsTab = 'general' | 'transcription' | 'api' | 'data' | 'experimental' | 'about'
+export type SettingsTab =
+  | 'general'
+  | 'transcription'
+  | 'transform'
+  | 'api'
+  | 'data'
+  | 'experimental'
+  | 'about'
 
 /**
  * A microphone, as offered to the picker. Enumerated by the widget renderer —
@@ -485,9 +835,13 @@ export interface IpcMap {
   'recordings:stats': [void, RecordingsStats]
   'recordings:clear': [void, RecordingsStats]
   'clipboard:write': [string, void]
-  'apiKey:status': [void, ApiKeyStatus]
-  'apiKey:set': [string, ApiKeyStatus]
-  'apiKey:clear': [void, ApiKeyStatus]
+  // Keyed rather than bare, because there are two secrets now. The id travels
+  // in both directions so a reply can never be applied to the wrong card.
+  'apiKey:status': [SecretId, ApiKeyStatus]
+  'apiKey:set': [{ id: SecretId; key: string }, ApiKeyStatus]
+  'apiKey:clear': [SecretId, ApiKeyStatus]
+  /** Asks the provider whether the stored key actually works. Never throws. */
+  'apiKey:verify': [SecretId, KeyCheck]
   'widget:clip': [ClipPayload, void]
   'widget:micError': [{ name: string; message: string }, void]
   'widget:devices': [{ requestId: number; devices: AudioInputDevice[] }, void]
@@ -500,6 +854,12 @@ export interface IpcMap {
   'moonshine:download': [MoonshineModelSize, MoonshineStatus]
   'moonshine:cancel': [void, MoonshineStatus]
   'moonshine:delete': [MoonshineModelSize, MoonshineStatus]
+  'transforms:list': [void, TransformDto[]]
+  'transforms:create': [NewTransformDto, TransformWrite]
+  'transforms:update': [{ id: number } & NewTransformDto, TransformWrite]
+  'transforms:delete': [number, boolean]
+  /** Live from the provider, so the picker cannot offer a retired model. */
+  'transforms:models': [TransformProviderId, TransformModel[]]
 }
 
 /**
@@ -529,6 +889,17 @@ export interface IpcEventMap {
   'moonshine:progress': MoonshineProgress
   /** main -> main window: the model's state changed (ready, failed, deleted). */
   'moonshine:statusChanged': MoonshineStatus
+  /**
+   * main -> main window: a transform ran, so its hit count moved.
+   *
+   * This entry went missing once, and nothing caught it. The channel existed in
+   * IPC_EVENT, was sent by broadcast.ts and listened for in the preload — and it
+   * all worked, because `webContents.send` takes an untyped string. This map is
+   * the only place the contract is written down, so an omission here is
+   * invisible until a renderer quietly stops updating. `sendToWindows` in
+   * broadcast.ts now goes through the map so it cannot happen again.
+   */
+  'transforms:changed': void
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */
