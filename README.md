@@ -12,7 +12,7 @@ Transcription runs either in the cloud through Groq, or
 network at all. That choice is yours and you can change it at any time.
 
 It works the other way round too. **[Transform](#transform)** rules are
-instructions you write — "rewrite this as a clear prompt", "make this formal" —
+instructions you write - "rewrite this as a clear prompt", "make this formal" -
 each bound to its own shortcut. Press one and an LLM rewrites the text already
 sitting in your input field, in place.
 
@@ -83,7 +83,7 @@ network surface.
 
 **Transforms are the exception, on either engine.** A transform is a request
 you make explicitly, by pressing a key, and the text you transform is sent to
-whichever provider you selected — Groq or Google Gemini. If you chose Moonshine
+whichever provider you selected - Groq or Google Gemini. If you chose Moonshine
 for the offline guarantee, running a transform is you deciding to give it up
 for that one action. The app says so in **Settings → Transform** rather than
 burying it here.
@@ -93,7 +93,7 @@ What never leaves, on either engine:
 - your transcripts and history: SQLite, `%APPDATA%\dictateflow-ai`
 - your recordings: WAV files in the same folder
 - your settings, personal dictionary and transform rules
-- your API keys — Groq and, if you set one, Gemini — encrypted at rest with
+- your API keys - Groq and, if you set one, Gemini - encrypted at rest with
   Windows DPAPI via Electron's `safeStorage`, keyed to your Windows account,
   stored outside the database and never included in an export
 
@@ -151,7 +151,7 @@ into **Settings → Transform**. It is stored the same way, in `gemini-key.bin`.
 Neither key is ever included in an export.
 
 Google issues Gemini keys beginning `AQ.` and `AIza`; both are accepted. The
-app does not pattern-match your key — it asks the provider whether the key
+app does not pattern-match your key - it asks the provider whether the key
 works and shows you the answer, with a **Check it works** button on the card.
 A key entered while offline is still saved, and reported as unchecked rather
 than rejected.
@@ -168,7 +168,7 @@ than rejected.
 | Switch cloud or local     | Title bar, or Settings → Transcription          |
 | Review or replay history  | Dictation tab, with audio for every session     |
 | Fix recurring misspellings| Dictionary tab, deterministic replacements      |
-| Rewrite text in place     | Tap a transform shortcut — `Ctrl`+`Alt`+`E` by default |
+| Rewrite text in place     | Tap a transform shortcut - `Ctrl`+`Alt`+`E` by default |
 | Manage rewrite rules      | Transform tab                                   |
 
 The floating widget appears on whichever monitor your cursor is on, and never
@@ -202,7 +202,7 @@ leaves `concatenate` alone.
 ### Transform
 
 Dictation puts text into a field. Transform changes text that is already
-there — whether you dictated it, typed it or pasted it.
+there - whether you dictated it, typed it or pasted it.
 
 A transform is a rule you write in plain English, bound to a shortcut. Press
 the shortcut and the text in the focused field is taken out, sent to an LLM
@@ -221,15 +221,15 @@ want.
   is restored too, images included.
 - **Groq or Gemini**, switchable in **Settings → Transform**. The model list is
   read live from the provider, so a retired model never sits in the dropdown
-  waiting to fail — and image, music and robotics models are filtered out,
+  waiting to fail - and image, music and robotics models are filtered out,
   because Google returns those on the same endpoint as chat models.
 - **Fast enough to be worth a keystroke.** Gemini transforms run with thinking
   disabled: a rewrite is not a reasoning task, and turning it off measurably
   halves the wait (690ms against 1.57s on `gemini-2.5-flash`). Models that
-  require a thinking budget still work — the request is retried once with it.
+  require a thinking budget still work - the request is retried once with it.
 
 A transform shortcut is a **tap**, not a hold, and it cannot contain your
-dictation combo or another transform's — if dictation is `Ctrl` + `Win`, then
+dictation combo or another transform's - if dictation is `Ctrl` + `Win`, then
 `Ctrl` + `Win` + `E` is refused, because pressing it would start a recording
 before the `E` ever registered.
 
@@ -320,7 +320,7 @@ Key released   →  silence/amplitude gate
 
 
 Ctrl+Alt+E tapped  →  uiohook-napi, fires on RELEASE (see below)
-                   →  Ctrl+C — was anything selected?
+                   →  Ctrl+C - was anything selected?
                         ├─ yes  →  transform the selection
                         └─ no   →  Ctrl+A, Ctrl+X, transform the whole field
                    →  rule + text  →  Groq or Gemini
@@ -341,8 +341,8 @@ Ctrl+Alt+E tapped  →  uiohook-napi, fires on RELEASE (see below)
 - **A transform tap fires on key RELEASE, not press.** `uiohook-napi` listens
   rather than intercepts, so the focused app receives the combo too. Simulating
   `Ctrl+C` while the user is still holding `Alt` would send it `Ctrl+Alt+C`.
-  The binding is armed on press — which is what shows the widget, so the press
-  feels registered — and fires when the last key lifts.
+  The binding is armed on press - which is what shows the widget, so the press
+  feels registered - and fires when the last key lifts.
 - **No two shortcuts may be subsets of one another.** Keydowns arrive one at a
   time, so if dictation is `Ctrl+Win`, a transform on `Ctrl+Win+E` would start a
   recording before `E` was ever seen. Rejected at save time with a reason, not
@@ -358,15 +358,15 @@ Ctrl+Alt+E tapped  →  uiohook-napi, fires on RELEASE (see below)
   and a CDN. Renderers are untouched by it. The model heap lives in the child.
 - **Transform providers are behind their own interface**
   (`src/services/transform/types.ts`), with `groq.ts` and `gemini.ts`. Gemini
-  talks plain `fetch` — two REST calls against a versioned endpoint did not
-  justify an SDK — and both classify their failures onto the same error union
+  talks plain `fetch` - two REST calls against a versioned endpoint did not
+  justify an SDK - and both classify their failures onto the same error union
   the speech layer uses, so the widget renders both with no new copy.
 - **API keys are validated by asking the provider**, not by checking a prefix.
   An earlier version did check a prefix and refused a valid Gemini key for
   starting `AQ.` instead of `AIza`. A credential's format belongs to the
   company that issues it; guessing at it fails closed, which is the worst way
   to be wrong. Listing models is free, authenticated, and answers the question
-  properly — `unreachable` stays a distinct answer from `rejected`, so a key
+  properly - `unreachable` stays a distinct answer from `rejected`, so a key
   saved offline is never reported as bad.
 
 [`CLAUDE.md`](CLAUDE.md) is the real build specification: measured latency

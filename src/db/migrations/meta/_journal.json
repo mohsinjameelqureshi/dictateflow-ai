@@ -36,6 +36,13 @@
       "when": 1787379626650,
       "tag": "0004_first_person_rule",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787397522571,
+      "tag": "0005_plain_dashes_in_rule",
+      "breakpoints": true
     }
   ]
 }

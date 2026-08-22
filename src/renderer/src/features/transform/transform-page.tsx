@@ -149,7 +149,7 @@ export function TransformPage() {
     >
       {/* The engine, stated rather than hidden in Settings. It applies to every
           rule below, it costs a network round trip, and on a Moonshine install
-          it is the one thing on screen that is not local — so it belongs where
+          it is the one thing on screen that is not local - so it belongs where
           the rules are, not two clicks away. */}
       <button
         type="button"
@@ -185,7 +185,7 @@ export function TransformPage() {
         ) : entries.length === 0 ? (
           <Empty
             title="No transforms yet"
-            hint="A transform is an instruction — “make this formal”, “turn this into bullets” — bound to a shortcut you press while the text is on screen."
+            hint="A transform is an instruction - “make this formal”, “turn this into bullets” - bound to a shortcut you press while the text is on screen."
           />
         ) : (
           <ul className="flex flex-col gap-2">
@@ -205,7 +205,7 @@ export function TransformPage() {
 
       <p className="mt-6 text-[13px] leading-relaxed text-ink-subtle">
         A transform takes whatever is selected. With nothing selected it takes the whole field, so
-        in a document that means the whole document — select first when the field is large.
+        in a document that means the whole document - select first when the field is large.
         Dictation stays on {formatShortcut(settings?.shortcut ?? DEFAULT_SETTINGS.shortcut)}; a
         transform combo can never contain it.
       </p>

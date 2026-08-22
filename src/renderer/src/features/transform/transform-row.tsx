@@ -74,7 +74,7 @@ export function TransformRow({
               // Not an error — a rule can be parked while it is being written.
               // But it is the one thing about the row worth noticing, so it
               // says what to do rather than just reading "Not set".
-              <span className="text-xs text-ink-subtle">No shortcut — set one to use it</span>
+              <span className="text-xs text-ink-subtle">No shortcut - set one to use it</span>
             )}
 
             <span className="text-xs tabular-nums text-ink-subtle">

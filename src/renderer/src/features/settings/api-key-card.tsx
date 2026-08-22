@@ -106,7 +106,7 @@ export function ApiKeyCard({ id }: { id: SecretId }) {
           }}
           placeholder={
             status?.present
-              ? "A key is saved — enter a new one to replace it"
+              ? "A key is saved - enter a new one to replace it"
               : spec.hint
           }
           aria-label={spec.label}

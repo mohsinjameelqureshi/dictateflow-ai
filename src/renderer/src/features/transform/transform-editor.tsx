@@ -92,7 +92,7 @@ export function TransformEditor({
           rows={5}
         />
         <p className="text-[13px] text-ink-muted">
-          Write it as an instruction to the model. It never sees this app or your history — only
+          Write it as an instruction to the model. It never sees this app or your history - only
           this rule and the text it is rewriting.
           {remaining < 500 && (
             <span className={remaining < 0 ? 'text-danger' : ''}>
@@ -107,7 +107,7 @@ export function TransformEditor({
         <div className="min-w-0 pt-1">
           <span className="text-[13px] font-medium text-ink">Shortcut</span>
           <p className="mt-0.5 max-w-sm text-[13px] text-ink-muted">
-            Press it once — this is a tap, not a hold. It cannot contain the dictation combo or
+            Press it once - this is a tap, not a hold. It cannot contain the dictation combo or
             another transform&rsquo;s.
           </p>
         </div>
