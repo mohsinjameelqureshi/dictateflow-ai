@@ -35,7 +35,9 @@ const { IPC_EVENT } = channels
 
 function widgetHarness() {
   const windows = []
+  const issues = loadSource('src/main/session-issues.ts')
   class FakeWindow extends EventEmitter {
+    static getAllWindows() { return windows.filter((win) => !win.isDestroyed()) }
     destroyed = false
     visible = false
     topCalls = []
@@ -68,8 +70,9 @@ function widgetHarness() {
     },
     'node:path': path,
     '../../shared/ipc-channels.js': channels,
+    '../session-issues.js': issues,
   })
-  return { api, windows }
+  return { api, windows, issues, FakeWindow }
 }
 
 test('cold startup retains listening and start until widget listeners are ready', () => {
@@ -142,6 +145,72 @@ test('destroyed widget cannot replay a pending microphone command into a replace
   api.onWidgetReady(next.webContents)
   assert.equal(next.messages.length, 1)
   assert.equal(next.messages[0].payload.state, 'cancelled')
+})
+
+test('full failure details reach the main window and remain after the pill hides', () => {
+  const { api, issues, FakeWindow } = widgetHarness()
+  const widget = api.createWidgetWindow()
+  const main = new FakeWindow({})
+  api.onWidgetReady(widget.webContents)
+  const message = 'This full provider explanation is deliberately longer than a floating pill can show without truncating useful recovery instructions.'
+  api.sendToWidget(IPC_EVENT.widgetState, {
+    state: 'error', source: 'transform', detail: 'Make this formal', message,
+  })
+  api.hideWidget()
+  api.sendToWidget(IPC_EVENT.widgetState, { state: 'success', source: 'dictation' })
+  const [issue] = issues.listSessionIssues()
+  assert.equal(issue.message, message)
+  assert.equal(issue.source, 'transform')
+  assert.equal(issue.detail, 'Make this formal')
+  assert.equal(main.messages.length, 1)
+  assert.equal(main.messages[0].channel, IPC_EVENT.sessionIssuesChanged)
+  assert.equal(main.messages[0].payload[0].id, issue.id)
+  assert.equal(widget.messages.some((entry) => entry.channel === IPC_EVENT.sessionIssuesChanged), false)
+  assert.equal(widget.visible, false)
+})
+
+test('failure details are retained while the main window is closed and the widget is not ready', () => {
+  const { api, issues, FakeWindow } = widgetHarness()
+  api.createWidgetWindow()
+  api.sendToWidget(IPC_EVENT.widgetState, { state: 'blocked', source: 'dictation' })
+  const main = new FakeWindow({})
+  assert.equal(main.messages.length, 0)
+  const retained = issues.listSessionIssues()
+  assert.equal(retained.length, 1)
+  assert.match(retained[0].message, /transcript is saved in Dictation/)
+  api.sendToWidget(IPC_EVENT.widgetState, { state: 'processing', source: 'dictation' })
+  assert.equal(issues.listSessionIssues().length, 1)
+})
+
+test('recent issues keep the newest twenty and clearing does not reuse their ids', () => {
+  const issues = loadSource('src/main/session-issues.ts')
+  for (let index = 0; index < 25; index += 1) {
+    issues.recordSessionIssue({ state: 'error', source: 'dictation', message: `Failure ${index}` })
+  }
+  const retained = issues.listSessionIssues()
+  assert.equal(retained.length, 20)
+  assert.equal(retained[0].message, 'Failure 24')
+  assert.equal(retained.at(-1).message, 'Failure 5')
+  const previousId = retained[0].id
+  retained.pop()
+  assert.equal(issues.listSessionIssues().length, 20)
+  issues.clearSessionIssues()
+  assert.equal(issues.listSessionIssues().length, 0)
+  issues.recordSessionIssue({ state: 'offline', source: 'transform' })
+  assert.ok(issues.listSessionIssues()[0].id > previousId)
+  assert.match(issues.listSessionIssues()[0].message, /connection/)
+})
+
+test('successful and in-progress states do not become issues, and transforms do not claim saved transcripts', () => {
+  const issues = loadSource('src/main/session-issues.ts')
+  for (const state of ['listening', 'processing', 'inserting', 'success', 'cancelled', 'transforming', 'transformed']) {
+    assert.equal(issues.recordSessionIssue({ state }), null)
+  }
+  assert.equal(issues.listSessionIssues().length, 0)
+  issues.recordSessionIssue({ state: 'blocked', source: 'transform' })
+  assert.doesNotMatch(issues.listSessionIssues()[0].message, /transcript is saved/)
+  issues.recordSessionIssue({ state: 'error', message: '  ' })
+  assert.match(issues.listSessionIssues()[0].message, /could not finish/)
 })
 
 function deferred() {

@@ -31,17 +31,28 @@ export function Stat({
   value,
   label,
   hint,
+  loading = false,
 }: {
-  value: string | number
+  value: string | number | null
   label: string
   hint?: string | undefined
+  loading?: boolean
 }) {
   return (
-    <div className="rounded-panel border border-line bg-panel p-6">
+    <div className="rounded-panel border border-line bg-panel p-6" aria-busy={loading}>
       {/* Proportional figures, NOT tabular-nums: equal-width digits make a
           number like 121 look loose at display sizes. Tabular is for columns
           that align vertically — see the heatmap's table view. */}
-      <div className="text-4xl font-semibold tracking-tight text-ink">{value}</div>
+      <div className="flex h-10 items-center text-4xl font-semibold tracking-tight text-ink">
+        {loading ? (
+          <>
+            <span aria-hidden className="h-8 w-20 rounded-md bg-line-soft" />
+            <span className="sr-only">Loading {label.toLowerCase()}</span>
+          </>
+        ) : value === null ? (
+          <span aria-label="Not available">—</span>
+        ) : value}
+      </div>
       <div className="mt-2 text-sm text-ink-muted">{label}</div>
       {hint && <div className="mt-0.5 text-xs text-ink-subtle">{hint}</div>}
     </div>

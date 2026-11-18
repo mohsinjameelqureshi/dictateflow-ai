@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button.js'
 import { Input } from '@/components/ui/input.js'
 import { Textarea } from '@/components/ui/textarea.js'
@@ -35,6 +35,8 @@ export function TransformEditor({
   const [shortcut, setShortcut] = useState(initial?.shortcut ?? '')
   const [problem, setProblem] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const id = useId()
+  const dirty = name !== (initial?.name ?? '') || rule !== (initial?.rule ?? '') || shortcut !== (initial?.shortcut ?? '')
 
   const commit = async () => {
     // Checked here as well as in the main process, against the same shared
@@ -57,6 +59,8 @@ export function TransformEditor({
         setShortcut('')
         setProblem(null)
       }
+    } catch {
+      setProblem('Could not save this transform. Your draft is kept. Try again.')
     } finally {
       setSaving(false)
     }
@@ -65,13 +69,13 @@ export function TransformEditor({
   const remaining = MAX_TRANSFORM_RULE - rule.trim().length
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" aria-busy={saving}>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="transform-name" className="text-[13px] font-medium text-ink">
+        <label htmlFor={`${id}-name`} className="text-[13px] font-medium text-ink">
           Name
         </label>
         <Input
-          id="transform-name"
+          id={`${id}-name`}
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enhance prompt"
@@ -81,11 +85,11 @@ export function TransformEditor({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="transform-rule" className="text-[13px] font-medium text-ink">
+        <label htmlFor={`${id}-rule`} className="text-[13px] font-medium text-ink">
           Rule
         </label>
         <Textarea
-          id="transform-rule"
+          id={`${id}-rule`}
           value={rule}
           onChange={(e) => setRule(e.target.value)}
           placeholder="Rewrite the text as a clear, well-structured prompt for an AI assistant. Keep every requirement the author gave. Do not answer it."
@@ -120,7 +124,8 @@ export function TransformEditor({
         />
       </div>
 
-      {problem && <p className="text-sm text-danger">{problem}</p>}
+      {dirty && <p className="text-xs text-ink-subtle">Unsaved changes. Your draft is kept while you switch pages.</p>}
+      {problem && <p role="alert" className="text-sm text-danger">{problem}</p>}
 
       <div className="flex items-center gap-2">
         <Button
@@ -131,8 +136,8 @@ export function TransformEditor({
           {submitLabel}
         </Button>
         {onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
+          <Button variant="ghost" onClick={onCancel} disabled={saving}>
+            {dirty ? 'Discard changes' : 'Cancel'}
           </Button>
         )}
       </div>

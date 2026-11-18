@@ -3,6 +3,7 @@ import { ArrowRight, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
 import { Input } from '@/components/ui/input.js'
 import { Tooltip } from '@/components/ui/tooltip.js'
+import { AnimatedSize } from '@/components/ui/reveal.js'
 import type { DictionaryDto } from '@shared/types.js'
 
 /**
@@ -28,13 +29,12 @@ export function RuleRow({
   const [confirming, setConfirming] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Reset the draft whenever the row starts or stops being edited, so a
-  // cancelled edit cannot leak into the next one.
-  useEffect(() => {
+  const startEditing = () => {
     setFrom(entry.from)
     setTo(entry.to)
     setProblem(null)
-  }, [editing, entry.from, entry.to])
+    setEditing(true)
+  }
 
   useEffect(() => {
     if (!confirming) return
@@ -55,7 +55,7 @@ export function RuleRow({
 
   if (editing) {
     return (
-      <li className="rounded-panel border border-accent bg-panel p-3">
+      <AnimatedSize as="li" className="rounded-panel border border-accent bg-panel px-4 py-3">
         <div className="flex items-center gap-2">
           <Input
             value={from}
@@ -85,16 +85,20 @@ export function RuleRow({
             Save
           </Button>
           <Button variant="ghost" onClick={() => setEditing(false)}>
-            Cancel
+            {from !== entry.from || to !== entry.to ? 'Discard changes' : 'Cancel'}
           </Button>
         </div>
-        {problem && <p className="mt-2 text-sm text-danger">{problem}</p>}
-      </li>
+        {(from !== entry.from || to !== entry.to) && (
+          <p className="mt-2 text-xs text-ink-subtle">Unsaved changes. Your draft is kept while you switch pages.</p>
+        )}
+        {problem && <p role="alert" className="mt-2 text-sm text-danger">{problem}</p>}
+      </AnimatedSize>
     )
   }
 
   return (
-    <li className="group flex items-center gap-3 rounded-panel border border-line bg-panel px-4 py-3">
+    <AnimatedSize as="li" className="group rounded-panel border border-line bg-panel px-4 py-3">
+      <div className="flex items-center gap-3">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <span className="selectable truncate text-sm text-ink-muted line-through decoration-ink-subtle">
           {entry.from}
@@ -125,7 +129,7 @@ export function RuleRow({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setEditing(true)}
+                onClick={startEditing}
                 aria-label={`Edit ${entry.from}`}
               >
                 <Pencil size={14} />
@@ -144,6 +148,7 @@ export function RuleRow({
           </>
         )}
       </div>
-    </li>
+      </div>
+    </AnimatedSize>
   )
 }

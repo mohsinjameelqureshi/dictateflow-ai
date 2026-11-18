@@ -2,6 +2,7 @@ import { BrowserWindow, screen, type WebContents } from 'electron'
 import { join } from 'node:path'
 import { IPC_EVENT, WIDGET_ROLE_ARG } from '../../shared/ipc-channels.js'
 import type { IpcEventMap, WidgetStatePayload } from '../../shared/types.js'
+import { recordSessionIssue } from '../session-issues.js'
 
 /**
  * The floating dictation widget (§6.2, §6.3).
@@ -163,8 +164,18 @@ export function sendToWidget<C extends keyof IpcEventMap>(
   payload: IpcEventMap[C],
 ): void {
   const win = getWidgetWindow()
+  if (channel === IPC_EVENT.widgetState) {
+    latestState = payload as WidgetStatePayload
+    const issues = recordSessionIssue(latestState)
+    if (issues) {
+      for (const target of BrowserWindow.getAllWindows()) {
+        if (target !== win && !target.isDestroyed()) {
+          target.webContents.send(IPC_EVENT.sessionIssuesChanged, issues)
+        }
+      }
+    }
+  }
   if (!win) return
-  if (channel === IPC_EVENT.widgetState) latestState = payload as WidgetStatePayload
   if (!rendererReady) {
     // States are snapshots; commands/device requests must keep their order.
     if (channel !== IPC_EVENT.widgetState) {

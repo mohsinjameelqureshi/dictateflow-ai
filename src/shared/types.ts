@@ -674,13 +674,27 @@ export type WidgetState =
 
 export interface WidgetStatePayload {
   state: WidgetState
-  /** Only read for `error`. The other states have fixed copy (§12). */
+  /** Full failure detail, retained in Recent issues instead of squeezed into the pill. */
   message?: string
+  source?: SessionSource
   /**
    * The transform's name, for `transforming`. The user can have several rules
    * bound to several combos, so "Transforming…" would not tell them which one
    * fired — and firing the wrong one is the mistake worth catching early.
    */
+  detail?: string
+}
+
+export type SessionSource = 'dictation' | 'transform'
+export type SessionIssueState = 'error' | 'offline' | 'rate-limited' | 'blocked' | 'no-speech' | 'no-text'
+
+/** Recent failures live in main-process memory until cleared or the app quits. */
+export interface SessionIssue {
+  id: number
+  createdAt: number
+  source: SessionSource
+  state: SessionIssueState
+  message: string
   detail?: string
 }
 
@@ -851,6 +865,8 @@ export interface IpcMap {
   'settings:open': [SettingsTab | undefined, void]
   'shortcut:suspend': [boolean, void]
   'app:info': [void, AppInfo]
+  'sessionIssues:list': [void, SessionIssue[]]
+  'sessionIssues:clear': [void, void]
   'moonshine:status': [MoonshineModelSize | undefined, MoonshineStatus]
   'moonshine:download': [MoonshineModelSize, MoonshineStatus]
   'moonshine:cancel': [void, MoonshineStatus]
@@ -901,6 +917,7 @@ export interface IpcEventMap {
    * broadcast.ts now goes through the map so it cannot happen again.
    */
   'transforms:changed': void
+  'sessionIssues:changed': SessionIssue[]
 }
 
 /** §8 metric definitions — a word is a whitespace token, empties filtered. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
 import { Empty, Page } from '@/components/page.js'
 import { Button } from '@/components/ui/button.js'
@@ -23,10 +23,19 @@ export function DictionaryPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  const [formProblem, setFormProblem] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{ from?: string; to?: string }>({})
+  const [adding, setAdding] = useState(false)
+  const [added, setAdded] = useState(false)
+  const addingRef = useRef(false)
+  const fromInput = useRef<HTMLInputElement>(null)
+  const toInput = useRef<HTMLInputElement>(null)
+  const formId = useId()
 
   const load = useCallback(async () => {
     try {
       setEntries(await window.dictateflow.dictionary.list())
+      setProblem(null)
     } catch {
       setProblem('Could not read your dictionary.')
     } finally {
@@ -43,24 +52,42 @@ export function DictionaryPage() {
   useEffect(() => window.dictateflow.dictations.onChanged(() => void load()), [load])
 
   const add = async () => {
+    if (addingRef.current) return
+    setFormProblem(null)
+    setFieldErrors({})
+    setAdded(false)
     // Checked here as well as in the main process, against the same shared
     // function — this one is for the message, that one is for the data.
     const local = validateRule(from, to)
     if (local) {
-      setProblem(local)
+      if (!from.trim()) {
+        setFieldErrors({ from: local })
+        fromInput.current?.focus()
+      } else {
+        setFieldErrors({ to: local })
+        toInput.current?.focus()
+      }
       return
     }
 
-    const result = await window.dictateflow.dictionary.create({ from, to })
-    if (!result.ok) {
-      setProblem(result.problem)
-      return
+    addingRef.current = true
+    setAdding(true)
+    try {
+      const result = await window.dictateflow.dictionary.create({ from, to })
+      if (!result.ok) {
+        setFormProblem(result.problem)
+        return
+      }
+      setFrom('')
+      setTo('')
+      setAdded(true)
+      await load()
+    } catch {
+      setFormProblem('Could not add that word. Your entries are still here. Try again.')
+    } finally {
+      addingRef.current = false
+      setAdding(false)
     }
-
-    setFrom('')
-    setTo('')
-    setProblem(null)
-    await load()
   }
 
   const save = async (id: number, nextFrom: string, nextTo: string): Promise<string | null> => {
@@ -84,48 +111,82 @@ export function DictionaryPage() {
       title="Dictionary"
       description="Words this app keeps getting wrong. Entries are suggested to the transcriber up front, and corrected afterwards if they still slip through."
     >
-      <section className="rounded-panel border border-line bg-panel p-5">
-        <h2 className="text-sm font-medium text-ink">Add a word</h2>
+      <form
+        noValidate
+        aria-labelledby={`${formId}-title`}
+        aria-busy={adding}
+        className="rounded-panel border border-line bg-panel p-5"
+        onSubmit={(event) => {
+          event.preventDefault()
+          void add()
+        }}
+      >
+        <h2 id={`${formId}-title`} className="text-sm font-medium text-ink">Add a word</h2>
 
-        <div className="mt-4 flex items-center gap-2">
-          <Input
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
-            placeholder="grog"
-            aria-label="Heard as"
-            spellCheck={false}
-            className="min-w-0 flex-1"
-          />
-          <ArrowRight size={14} className="shrink-0 text-ink-subtle" aria-hidden />
-          <Input
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
-            placeholder="Groq"
-            aria-label="Should be"
-            spellCheck={false}
-            className="min-w-0 flex-1"
-          />
-          <Button variant="primary" onClick={() => void add()} disabled={!from.trim() || !to.trim()}>
-            <Plus size={14} />
-            Add
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-start gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label htmlFor={`${formId}-from`} className="text-[13px] font-medium text-ink">Heard as</label>
+            <Input
+              ref={fromInput}
+              id={`${formId}-from`}
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value)
+                setFieldErrors({})
+                setFormProblem(null)
+                setAdded(false)
+              }}
+              placeholder="e.g. grog"
+              aria-invalid={!!fieldErrors.from}
+              aria-describedby={fieldErrors.from ? `${formId}-from-error` : `${formId}-hint`}
+              disabled={adding}
+              spellCheck={false}
+              className={fieldErrors.from ? 'w-full border-danger' : 'w-full'}
+            />
+            {fieldErrors.from && <p id={`${formId}-from-error`} role="alert" className="text-xs text-danger">{fieldErrors.from}</p>}
+          </div>
+          <ArrowRight size={14} className="mt-9 shrink-0 text-ink-subtle" aria-hidden />
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <label htmlFor={`${formId}-to`} className="text-[13px] font-medium text-ink">Replace with</label>
+            <Input
+              ref={toInput}
+              id={`${formId}-to`}
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value)
+                setFieldErrors({})
+                setFormProblem(null)
+                setAdded(false)
+              }}
+              placeholder="e.g. Groq"
+              aria-invalid={!!fieldErrors.to}
+              aria-describedby={fieldErrors.to ? `${formId}-to-error` : `${formId}-hint`}
+              disabled={adding}
+              spellCheck={false}
+              className={fieldErrors.to ? 'w-full border-danger' : 'w-full'}
+            />
+            {fieldErrors.to && <p id={`${formId}-to-error`} role="alert" className="text-xs text-danger">{fieldErrors.to}</p>}
+          </div>
+          <Button type="submit" variant="primary" className="mt-[26px] min-w-24" disabled={adding}>
+            <Plus size={14} aria-hidden />
+            {adding ? 'Adding…' : 'Add word'}
           </Button>
         </div>
 
-        <p className="mt-2 text-[13px] text-ink-muted">
+        <p id={`${formId}-hint`} className="mt-3 text-[13px] text-ink-muted">
           Matching ignores case and only ever replaces whole words, so a rule for “cat” leaves
           “concatenate” alone.
         </p>
 
-        {problem && <p className="mt-3 text-sm text-danger">{problem}</p>}
-      </section>
+        {formProblem && <p role="alert" className="mt-3 text-sm text-danger">{formProblem}</p>}
+        {(from || to) && !adding && (
+          <p className="mt-3 text-xs text-ink-subtle">Your draft is kept while you switch pages.</p>
+        )}
+        {added && <p role="status" className="mt-3 text-sm text-success">Word added to your dictionary.</p>}
+      </form>
 
       <div className="mt-4">
+        {problem && <p role="alert" className="mb-4 text-sm text-danger">{problem}</p>}
         {loading ? (
           <p className="text-sm text-ink-muted">Loading…</p>
         ) : entries.length === 0 ? (

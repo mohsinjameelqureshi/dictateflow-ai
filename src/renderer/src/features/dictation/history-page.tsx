@@ -47,9 +47,6 @@ export function HistoryPage() {
     return () => clearTimeout(t)
   }, [search, favoritesOnly, limit, load])
 
-  // Typing a new search while showing page four should start over at page one.
-  useEffect(() => setLimit(PAGE), [search, favoritesOnly])
-
   // The capture loop writes from the main process, so the list has to be told
   // rather than polled.
   useEffect(
@@ -92,7 +89,10 @@ export function HistoryPage() {
       actions={
         <Button
           variant={favoritesOnly ? 'primary' : 'secondary'}
-          onClick={() => setFavoritesOnly((v) => !v)}
+          onClick={() => {
+            setFavoritesOnly((v) => !v)
+            setLimit(PAGE)
+          }}
           aria-pressed={favoritesOnly}
         >
           <Star size={14} className={cn(favoritesOnly && 'fill-current')} />
@@ -106,7 +106,10 @@ export function HistoryPage() {
         <Search size={15} className="shrink-0 text-ink-subtle" />
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setLimit(PAGE)
+          }}
           placeholder="Search transcripts"
           aria-label="Search transcripts"
           className="h-10 w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-subtle"

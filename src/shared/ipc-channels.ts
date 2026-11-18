@@ -94,6 +94,8 @@ export const IPC = {
 
   /* diagnostics */
   appInfo: 'app:info',
+  sessionIssuesList: 'sessionIssues:list',
+  sessionIssuesClear: 'sessionIssues:clear',
 } as const
 
 /**
@@ -127,6 +129,7 @@ export const IPC_EVENT = {
   moonshineStatusChanged: 'moonshine:statusChanged',
   /** main -> main window: a transform ran, so its hit count moved. */
   transformsChanged: 'transforms:changed',
+  sessionIssuesChanged: 'sessionIssues:changed',
 } as const
 
 /**

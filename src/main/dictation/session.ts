@@ -344,7 +344,7 @@ class DictationSession {
   }
 
   #state(state: WidgetState, message?: string): void {
-    sendToWidget(IPC_EVENT.widgetState, message === undefined ? { state } : { state, message })
+    sendToWidget(IPC_EVENT.widgetState, { state, source: 'dictation', ...(message === undefined ? {} : { message }) })
   }
 
   /** Terminal state: show it, then hide the widget and return to idle. */

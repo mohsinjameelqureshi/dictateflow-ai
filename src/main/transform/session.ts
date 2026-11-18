@@ -112,6 +112,7 @@ class TransformSession {
   #dismissTimer: NodeJS.Timeout | null = null
   /** Bumped on every run and cancel, so late async work can tell it is stale. */
   #gen = 0
+  #ruleName = ''
 
   /** The user's clipboard, taken once and put back once, at the very end. */
   #saved: ClipboardSnapshot | null = null
@@ -144,6 +145,7 @@ class TransformSession {
     if (!rule?.enabled) return
 
     this.#phase = 'arming'
+    this.#ruleName = rule.name
     this.#gen += 1
     this.#clearDismiss()
     this.#state('transforming', rule.name)
@@ -462,7 +464,8 @@ class TransformSession {
   #state(state: WidgetState, detail?: string, message?: string): void {
     sendToWidget(IPC_EVENT.widgetState, {
       state,
-      ...(detail === undefined ? {} : { detail }),
+      source: 'transform',
+      ...((detail ?? this.#ruleName) ? { detail: detail ?? this.#ruleName } : {}),
       ...(message === undefined ? {} : { message }),
     })
   }

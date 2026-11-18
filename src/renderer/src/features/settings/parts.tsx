@@ -38,7 +38,7 @@ export function Row({
   children: ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-8 border-b border-line-soft py-4 last:border-0">
+    <div className="flex flex-col items-start gap-3 border-b border-line-soft py-4 last:border-0 @[36rem]/settings:flex-row @[36rem]/settings:justify-between @[36rem]/settings:gap-6">
       <div className="min-w-0 pt-1">
         {/* A <label> pointing at nothing is worse than a <span>: screen
             readers announce it as a control that cannot be reached. The
@@ -52,7 +52,7 @@ export function Row({
         )}
         {hint && <p className="mt-0.5 max-w-sm text-[13px] text-ink-muted">{hint}</p>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="w-full min-w-0 @[36rem]/settings:flex @[36rem]/settings:w-80 @[36rem]/settings:shrink-0 @[36rem]/settings:justify-end">{children}</div>
     </div>
   )
 }
@@ -85,14 +85,13 @@ export function Toggle({
       onClick={() => onChange(!checked)}
       className={cn(
         'relative h-6 w-11 shrink-0 rounded-full transition-colors',
-        checked ? 'bg-accent' : 'bg-line',
+        checked ? 'bg-accent' : 'bg-switch-track',
       )}
     >
       <span
         className={cn(
-          // The knob rides both the accent fill and the neutral track, so it
-          // follows the same token as text on a solid fill.
-          'absolute top-0.5 size-5 rounded-full bg-on-solid shadow-sm transition-[left]',
+          'absolute top-0.5 size-5 rounded-full shadow-sm transition-[left,background-color]',
+          checked ? 'bg-switch-thumb-on' : 'bg-switch-thumb',
           checked ? 'left-[22px]' : 'left-0.5',
         )}
       />
@@ -120,7 +119,7 @@ export function Select({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       className={cn(
-        'h-9 w-64 max-w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink',
+        'h-9 w-full min-w-0 max-w-64 rounded-lg border border-line bg-surface px-3 text-sm text-ink',
         'outline-none focus-visible:border-accent disabled:opacity-50',
       )}
     >

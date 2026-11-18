@@ -5,6 +5,7 @@ import type {
   MoonshineProgress,
   MoonshineStatus,
   Settings,
+  SessionIssue,
 } from '../shared/types.js'
 import { getWidgetWindow } from './windows/widget-window.js'
 
@@ -50,6 +51,10 @@ export function broadcastDictationsChanged(): void {
  */
 export function broadcastTransformsChanged(): void {
   sendToWindows(IPC_EVENT.transformsChanged)
+}
+
+export function broadcastSessionIssues(issues: SessionIssue[]): void {
+  sendToWindows(IPC_EVENT.sessionIssuesChanged, issues)
 }
 
 /**

@@ -44,22 +44,10 @@ function binOf(words: number, max: number): number {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/**
- * What the hover bubble shows: the session count, nothing else.
- *
- * `describe` below stays as each cell's accessible name — a screen-reader user
- * moving through the grid has no other way to tell which day they are on, and
- * "37 sessions" alone would be unplaceable among 371 cells.
- */
-const sessionLabel = (stat: DayStat): string => {
-  if (stat.sessions === 0) return 'No sessions'
-  return `${stat.sessions} ${stat.sessions === 1 ? 'session' : 'sessions'}`
-}
-
+/** The tooltip and accessible name describe the same date and encoded value. */
 const describe = (stat: DayStat): string => {
   const date = parseDay(stat.day)
   const when = `${MONTHS[date.getMonth()] ?? ''} ${date.getDate()}, ${date.getFullYear()}`
-  if (stat.sessions === 0) return `${when}: nothing dictated`
   return `${when}: ${stat.words.toLocaleString()} ${stat.words === 1 ? 'word' : 'words'} in ${
     stat.sessions
   } ${stat.sessions === 1 ? 'session' : 'sessions'}`
@@ -75,7 +63,7 @@ export function Heatmap({ days }: { days: DayStat[] }) {
    */
   const [anchor, setAnchor] = useState<TooltipAnchor | null>(null)
   const point = (e: { currentTarget: HTMLElement }, day: DayStat) =>
-    setAnchor({ rect: e.currentTarget.getBoundingClientRect(), label: sessionLabel(day) })
+    setAnchor({ rect: e.currentTarget.getBoundingClientRect(), label: describe(day) })
 
   const max = useMemo(() => days.reduce((n, d) => Math.max(n, d.words), 0), [days])
 
@@ -130,14 +118,18 @@ export function Heatmap({ days }: { days: DayStat[] }) {
    * week, and whatever streak is running — is the right one. Land there rather
    * than making the reader drag to it.
    *
-   * Layout effect, so it is positioned before paint instead of jumping. Keyed
-   * on the view toggle only: a refetch after each dictation must not yank the
-   * scroll back while the reader is looking at last winter.
+   * Remember the reader's position across chart/table and page switches.
+   * A refetch after dictation must not yank the chart back to this week.
    */
   const scroller = useRef<HTMLDivElement>(null)
+  const scrollPosition = useRef<number | null>(null)
   useLayoutEffect(() => {
     const el = scroller.current
-    if (el) el.scrollLeft = el.scrollWidth
+    if (el) {
+      el.scrollLeft = scrollPosition.current ?? el.scrollWidth
+      scrollPosition.current = el.scrollLeft
+    }
+    return () => setAnchor(null)
   }, [tableView])
 
   return (
@@ -161,7 +153,14 @@ export function Heatmap({ days }: { days: DayStat[] }) {
         <TableView days={active} />
       ) : (
         <>
-          <div ref={scroller} className="mt-5 overflow-x-auto pb-1">
+          <div
+            ref={scroller}
+            className="mt-5 overflow-x-auto pb-1"
+            onScroll={(event) => {
+              scrollPosition.current = event.currentTarget.scrollLeft
+              setAnchor(null)
+            }}
+          >
             <div className="inline-flex flex-col gap-1">
               {/* Month labels ride above the columns they start. */}
               <div className="relative h-4" style={{ marginLeft: 30 }} aria-hidden>

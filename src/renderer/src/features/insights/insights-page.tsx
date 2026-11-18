@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Page, Stat } from '@/components/page.js'
+import { Button } from '@/components/ui/button.js'
 import type { InsightsDto } from '@shared/types.js'
 import { Heatmap } from './heatmap.js'
 
@@ -24,12 +25,17 @@ function formatDuration(ms: number): string {
 export function InsightsPage() {
   const [data, setData] = useState<InsightsDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       setData(await window.dictateflow.insights.get())
     } catch {
       setError('Could not read your statistics.')
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -42,20 +48,29 @@ export function InsightsPage() {
 
   return (
     <Page title="Insights" description="Derived from your local history.">
-      {error && <p className="mb-4 text-sm text-danger">{error}</p>}
+      {error && (
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
+          <p role="alert" className="text-sm text-danger">
+            {error}{data && ' Showing your last loaded statistics.'}
+          </p>
+          <Button size="sm" onClick={() => void load()} disabled={loading}>Try again</Button>
+        </div>
+      )}
 
       {/* Rate first, then the totals it is derived from, then the streak —
           which measures habit rather than volume and belongs at the end. */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat value={data?.wpm ?? 0} label="Words per minute" hint="over recording time" />
-        <Stat value={(data?.totalWords ?? 0).toLocaleString()} label="Words" />
+        <Stat value={data?.wpm ?? null} label="Words per minute" hint="over recording time" loading={!data && loading} />
+        <Stat value={data?.totalWords.toLocaleString() ?? null} label="Words" loading={!data && loading} />
         <Stat
-          value={(data?.totalSessions ?? 0).toLocaleString()}
+          value={data?.totalSessions.toLocaleString() ?? null}
+          loading={!data && loading}
           label="Sessions"
           hint={data ? formatDuration(data.totalDurationMs) + ' recorded' : undefined}
         />
         <Stat
-          value={data?.currentStreak ?? 0}
+          value={data?.currentStreak ?? null}
+          loading={!data && loading}
           label="Day streak"
           hint={data && data.longestStreak > 0 ? `best ${data.longestStreak}` : undefined}
         />
@@ -64,11 +79,12 @@ export function InsightsPage() {
       <div className="mt-4">
         {data ? (
           <Heatmap days={data.days} />
-        ) : (
-          <div className="rounded-panel border border-line bg-panel p-6">
-            <p className="text-sm text-ink-muted">Loading…</p>
+        ) : loading ? (
+          <div role="status" className="rounded-panel border border-line bg-panel p-6">
+            <p className="text-sm text-ink-muted">Loading activity…</p>
+            <div aria-hidden className="mt-5 h-28 rounded-lg bg-line-soft" />
           </div>
-        )}
+        ) : null}
       </div>
     </Page>
   )

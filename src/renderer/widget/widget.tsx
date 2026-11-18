@@ -22,6 +22,7 @@ import { Waveform } from './waveform.js'
  * Copy follows §12: sentence case, active voice, says what happened — never
  * apologises, never vague.
  *
+ * Full failures remain available in the main window's Recent issues panel.
  * `transforming` is absent because its label is the RULE'S NAME, which arrives
  * on the payload. The user can have several rules on several combos, so
  * "Transforming…" would not tell them which one fired — and firing the wrong
@@ -32,9 +33,10 @@ const COPY: Partial<Record<WidgetState, string>> = {
   inserting: 'Inserting',
   success: 'Inserted',
   'no-speech': "Didn't catch that",
-  offline: 'No connection',
-  'rate-limited': 'Rate limited. Try again',
-  blocked: "Can't type into this window",
+  offline: 'No connection · See app',
+  'rate-limited': 'Rate limited · See app',
+  blocked: 'Typing blocked · See app',
+  error: 'Error · See app',
   transformed: 'Transformed',
   'no-text': 'Nothing to transform',
 }
@@ -166,15 +168,13 @@ export function Widget() {
     })
   }, [])
 
-  const { state, message, detail } = payload
+  const { state, detail } = payload
   // `listening` renders a waveform instead of text, and `cancelled` is
   // invisible — both are absent from COPY on purpose.
   const label =
-    state === 'error'
-      ? (message ?? 'Something went wrong')
-      : state === 'transforming'
-        ? `${detail ?? 'Transforming'}…`
-        : (COPY[state] ?? '')
+    state === 'transforming'
+      ? `${detail ?? 'Transforming'}…`
+      : (COPY[state] ?? '')
 
   return (
     <div className="flex h-screen w-screen items-center justify-center p-1">

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils.js'
 import { TitleBarDownload } from './title-bar-download.js'
 import { TitleBarMic } from './title-bar-mic.js'
 import { TitleBarModel } from './title-bar-model.js'
+import { RecentIssues } from './recent-issues.js'
 
 const GITHUB_URL = 'https://github.com/mohsinjameelqureshi/dictateflow-ai'
 
@@ -113,6 +114,7 @@ export function TitleBar({ sidebar }: { sidebar: { collapsed: boolean; onToggle:
           {/* Engine then microphone: what transcribes, then what listens. */}
           <TitleBarModel />
           <TitleBarMic />
+          <RecentIssues />
           <Tooltip label="Star on GitHub">
             <a
               href={GITHUB_URL}

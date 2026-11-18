@@ -19,6 +19,7 @@ import {
   broadcastDictationsChanged,
   broadcastSettings,
   broadcastTransformsChanged,
+  broadcastSessionIssues,
 } from '../broadcast.js'
 import { exportData, importData } from '../data-transfer.js'
 import { applyLoginItem } from '../startup.js'
@@ -75,6 +76,7 @@ import {
 } from '../shortcut/index.js'
 import { openSettings } from '../windows/main-window.js'
 import { onWidgetReady } from '../windows/widget-window.js'
+import { clearSessionIssues, listSessionIssues } from '../session-issues.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -88,6 +90,11 @@ function handle<C extends keyof IpcMap>(
 }
 
 export function registerIpcHandlers(): void {
+  handle(IPC.sessionIssuesList, () => listSessionIssues())
+  handle(IPC.sessionIssuesClear, () => {
+    clearSessionIssues()
+    broadcastSessionIssues(listSessionIssues())
+  })
   /* ---------------------------------------------------------- window ---- */
 
   const senderWindow = (event: Electron.IpcMainInvokeEvent): BrowserWindow | null =>

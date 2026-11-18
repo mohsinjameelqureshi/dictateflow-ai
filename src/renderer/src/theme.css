@@ -22,8 +22,8 @@
   --color-panel: #ffffff;
 
   --color-ink: #18181b;
-  --color-ink-muted: #71717a;
-  --color-ink-subtle: #a1a1aa;
+  --color-ink-muted: #52525b;
+  --color-ink-subtle: #666670;
 
   --color-line: #e4e4e7;
   --color-line-soft: #f4f4f5;
@@ -50,6 +50,11 @@
    * white text would drop to about 2.3:1.
    */
   --color-on-solid: #ffffff;
+
+  /* Switch geometry has its own contrast needs, independent of button text. */
+  --color-switch-thumb: #ffffff;
+  --color-switch-thumb-on: #ffffff;
+  --color-switch-track: #71717a;
 
   --color-danger: #dc2626;
   --color-success: #15803d;
@@ -123,6 +128,9 @@
 
   /* Dark ink on a light accent fill, for the same reason white is used above. */
   --color-on-solid: #17171a;
+  --color-switch-thumb: #ffffff;
+  --color-switch-thumb-on: #17171a;
+  --color-switch-track: #52525b;
 
   --color-danger: #f87171;
   --color-success: #4ade80;

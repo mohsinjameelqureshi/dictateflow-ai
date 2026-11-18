@@ -24,6 +24,7 @@ import type {
   SettingKey,
   Settings,
   SettingsTab,
+  SessionIssue,
   TransferResult,
   TransformDto,
   TransformModel,
@@ -44,6 +45,15 @@ function invoke<C extends keyof IpcMap>(
  * no ipcRenderer, no node, no fs (§6.7).
  */
 export const mainApi = {
+  sessionIssues: {
+    list: (): Promise<SessionIssue[]> => invoke(IPC.sessionIssuesList),
+    clear: (): Promise<void> => invoke(IPC.sessionIssuesClear),
+    onChanged: (cb: (issues: SessionIssue[]) => void): (() => void) => {
+      const listener = (_event: unknown, issues: SessionIssue[]) => cb(issues)
+      ipcRenderer.on(IPC_EVENT.sessionIssuesChanged, listener)
+      return () => ipcRenderer.off(IPC_EVENT.sessionIssuesChanged, listener)
+    },
+  },
   window: {
     minimize: () => invoke(IPC.windowMinimize),
     maximize: () => invoke(IPC.windowMaximize),

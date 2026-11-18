@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Settings2, X } from 'lucide-react'
 import { Empty, Page } from '@/components/page.js'
 import { Button } from '@/components/ui/button.js'
+import { Reveal } from '@/components/ui/reveal.js'
 import { useSettingsDialog } from '@/features/settings/store.js'
 import { formatShortcut, type ShortcutClaim } from '@shared/shortcut.js'
 import {
@@ -32,6 +33,7 @@ export function TransformPage() {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [draftVersion, setDraftVersion] = useState(0)
   const [problem, setProblem] = useState<string | null>(null)
 
   const openSettings = useSettingsDialog((s) => s.open)
@@ -140,7 +142,10 @@ export function TransformPage() {
       description="Rewrite the text that is already in a field. Press a shortcut, and the rule you wrote is applied to it in place."
       actions={
         !adding && (
-          <Button variant="primary" onClick={() => setAdding(true)}>
+          <Button variant="primary" onClick={() => {
+            setDraftVersion((version) => version + 1)
+            setAdding(true)
+          }}>
             <Plus size={14} />
             New transform
           </Button>
@@ -165,17 +170,18 @@ export function TransformPage() {
         <span className="shrink-0 text-[13px] text-ink-muted">Change</span>
       </button>
 
-      {adding && (
+      <Reveal open={adding}>
         <section className="mt-4 rounded-panel border border-accent bg-panel p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-medium text-ink">New transform</h2>
-            <Button size="icon" variant="ghost" onClick={() => setAdding(false)} aria-label="Close">
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
               <X size={14} />
+              Discard draft
             </Button>
           </div>
-          <TransformEditor claims={claims} submitLabel="Add transform" onSubmit={add} />
+          <TransformEditor key={draftVersion} claims={claims} submitLabel="Add transform" onSubmit={add} />
         </section>
-      )}
+      </Reveal>
 
       {problem && <p className="mt-4 text-sm text-danger">{problem}</p>}
 

@@ -152,17 +152,19 @@ export function ShortcutField({
       // The matching `false`, guaranteed on every exit including unmount. A
       // stuck `true` disables dictation with no visible cause.
       void window.dictateflow.shortcut.suspend(false)
+      // A page switch keeps the edited shortcut, but ends key capture.
+      setCapturing(false)
     }
   }, [capturing])
 
   const keys = capturing ? preview : parseShortcut(value)
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-2">
+    <div className="flex w-full max-w-[25rem] flex-col items-start gap-2">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
         <div
           className={cn(
-            'flex h-9 w-64 items-center justify-center gap-1.5 rounded-lg border px-3',
+            'flex min-h-9 min-w-0 max-w-64 flex-1 flex-wrap items-center justify-center gap-1.5 rounded-lg border px-3 py-1',
             capturing ? 'border-accent bg-accent-soft' : 'border-line bg-surface',
           )}
         >
@@ -177,6 +179,7 @@ export function ShortcutField({
 
         <Button
           size="sm"
+          className="shrink-0"
           variant={capturing ? 'primary' : 'secondary'}
           onClick={() => setCapturing((c) => !c)}
         >
@@ -194,9 +197,9 @@ export function ShortcutField({
       </div>
 
       {problem ? (
-        <p className="max-w-72 text-right text-[13px] text-danger">{problem}</p>
+        <p className="max-w-full text-[13px] text-danger">{problem}</p>
       ) : capturing ? (
-        <p className="text-right text-[13px] text-ink-muted">
+        <p className="text-[13px] text-ink-muted">
           {mode === 'hold' ? 'Release to set. Esc to cancel.' : 'Press a combo. Esc to cancel.'}
         </p>
       ) : null}

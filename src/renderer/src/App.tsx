@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Activity, useCallback, useEffect, useState } from 'react'
 import type { AppRoute } from '@shared/types.js'
 import { useTheme } from './lib/theme.js'
 import { Sidebar, SidebarHandle } from './app/sidebar.js'
@@ -17,6 +17,12 @@ import { TransformPage } from './features/transform/transform-page.js'
  * so the rail does not render expanded and then snap narrow on first paint.
  */
 const SIDEBAR_KEY = 'dictateflow.sidebarCollapsed'
+const PAGES = {
+  history: HistoryPage,
+  dictionary: DictionaryPage,
+  transform: TransformPage,
+  insights: InsightsPage,
+}
 
 /**
  * Plain state routing. There are four destinations and no URLs to preserve, so
@@ -26,6 +32,7 @@ const SIDEBAR_KEY = 'dictateflow.sidebarCollapsed'
  */
 export default function App() {
   const [route, setRoute] = useState<AppRoute>('history')
+  const [visited, setVisited] = useState<AppRoute[]>(['history'])
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
 
   const settingsTab = useSettingsDialog((s) => s.tab)
@@ -34,7 +41,11 @@ export default function App() {
 
   // `true` — the main window cross-fades theme changes; the widget does not.
   useTheme(window.dictateflow.theme, true)
-  useEffect(() => window.dictateflow.app.onNavigate(setRoute), [])
+  const navigate = useCallback((next: AppRoute) => {
+    setVisited((pages) => pages.includes(next) ? pages : [...pages, next])
+    setRoute(next)
+  }, [])
+  useEffect(() => window.dictateflow.app.onNavigate(navigate), [navigate])
   useEffect(() => localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'), [collapsed])
 
   // The tray asks for Settings by naming a tab. That both opens the dialog and
@@ -60,7 +71,7 @@ export default function App() {
         <Sidebar
           route={route}
           collapsed={collapsed}
-          onNavigate={setRoute}
+          onNavigate={navigate}
           onOpenSettings={openSettings}
         />
         <SidebarHandle onToggle={toggleSidebar} />
@@ -68,10 +79,16 @@ export default function App() {
             and without it the scrolled content paints over the rounded
             corners. */}
         <main className="min-w-0 flex-1 overflow-hidden rounded-panel border border-line bg-panel">
-          {route === 'history' && <HistoryPage />}
-          {route === 'dictionary' && <DictionaryPage />}
-          {route === 'transform' && <TransformPage />}
-          {route === 'insights' && <InsightsPage />}
+          {/* Keep visited pages' drafts and scroll positions; Activity pauses
+              effects and global listeners while a page is hidden. */}
+          {visited.map((page) => {
+            const Component = PAGES[page]
+            return (
+              <Activity key={page} name={page} mode={route === page ? 'visible' : 'hidden'}>
+                <Component />
+              </Activity>
+            )
+          })}
         </main>
       </div>
 

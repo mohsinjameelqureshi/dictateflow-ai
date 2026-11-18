@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils.js'
 
@@ -130,6 +130,12 @@ export function Tooltip({
   const host = useRef<HTMLSpanElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [anchor, setAnchor] = useState<TooltipAnchor | null>(null)
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = null
+    setAnchor(null)
+  }, [])
 
   const clear = () => {
     if (timer.current) clearTimeout(timer.current)

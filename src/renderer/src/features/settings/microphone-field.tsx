@@ -43,8 +43,8 @@ export function MicrophoneField({
   useEffect(() => window.dictateflow.devices.onChanged(() => void load()), [load])
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-2">
+    <div className="flex w-full max-w-[296px] flex-col items-start gap-2">
+      <div className="flex w-full min-w-0 items-center gap-2">
         <Select
           id="microphone"
           value={value}
@@ -59,7 +59,7 @@ export function MicrophoneField({
           ))}
         </Select>
 
-        <Tooltip label="Refresh">
+        <Tooltip label="Refresh" className="shrink-0">
           <Button
             size="icon"
             variant="secondary"

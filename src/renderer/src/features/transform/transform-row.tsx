@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button.js'
 import { Tooltip } from '@/components/ui/tooltip.js'
+import { AnimatedSize } from '@/components/ui/reveal.js'
 import { KeyCap, Toggle } from '@/features/settings/parts.js'
 import { keyLabel, parseShortcut, type ShortcutClaim } from '@shared/shortcut.js'
 import type { NewTransformDto, TransformDto } from '@shared/types.js'
@@ -39,7 +40,7 @@ export function TransformRow({
 
   if (editing) {
     return (
-      <li className="rounded-panel border border-accent bg-panel p-5">
+      <AnimatedSize as="li" className="rounded-panel border border-accent bg-panel px-5 py-4">
         <TransformEditor
           initial={{ name: entry.name, rule: entry.rule, shortcut: entry.shortcut }}
           claims={claims}
@@ -51,14 +52,14 @@ export function TransformRow({
           }}
           onCancel={() => setEditing(false)}
         />
-      </li>
+      </AnimatedSize>
     )
   }
 
   const keys = parseShortcut(entry.shortcut)
 
   return (
-    <li className="group rounded-panel border border-line bg-panel px-5 py-4">
+    <AnimatedSize as="li" className="group rounded-panel border border-line bg-panel px-5 py-4">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -136,6 +137,6 @@ export function TransformRow({
           </div>
         </div>
       </div>
-    </li>
+    </AnimatedSize>
   )
 }

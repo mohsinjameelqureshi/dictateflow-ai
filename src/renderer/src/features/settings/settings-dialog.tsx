@@ -62,14 +62,14 @@ export function SettingsDialog({
   const store = useSettings()
 
   return (
-    <Dialog open onClose={onClose} title="Settings" className="h-[640px] max-w-[880px]">
+    <Dialog open onClose={onClose} title="Settings" className="h-[640px] max-w-[960px]">
       {/* Same panelled layout as the main window: the dialog panel is the
           ground, and the rail and the tab content each float on it as their own
           block. The gap is the separator, so the rail drops its `border-r`. */}
       <div className="flex min-h-0 flex-1 gap-2 p-2 pt-0">
         <nav
           aria-label="Settings"
-          className="flex w-48 shrink-0 flex-col gap-1 overflow-y-auto rounded-panel border border-line bg-panel p-3"
+          className="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto rounded-panel border border-line bg-panel p-2 min-[1040px]:w-48 min-[1040px]:p-3"
         >
           {TABS.map(({ id, label, icon: Icon }) => {
             const active = tab === id
@@ -94,7 +94,7 @@ export function SettingsDialog({
           })}
         </nav>
 
-        <main className="min-w-0 flex-1 overflow-y-auto rounded-panel border border-line bg-panel px-8 py-8">
+        <main className="@container/settings min-w-0 flex-1 overflow-y-auto rounded-panel border border-line bg-panel p-5 min-[1040px]:p-8">
           {store.error && (
             <p className="mb-4 flex items-center gap-2 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
               <TriangleAlert size={14} className="shrink-0" />
