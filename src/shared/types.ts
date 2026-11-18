@@ -842,6 +842,7 @@ export interface IpcMap {
   'apiKey:clear': [SecretId, ApiKeyStatus]
   /** Asks the provider whether the stored key actually works. Never throws. */
   'apiKey:verify': [SecretId, KeyCheck]
+  'widget:ready': [void, void]
   'widget:clip': [ClipPayload, void]
   'widget:micError': [{ name: string; message: string }, void]
   'widget:devices': [{ requestId: number; devices: AudioInputDevice[] }, void]

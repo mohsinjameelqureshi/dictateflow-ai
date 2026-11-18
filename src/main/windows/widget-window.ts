@@ -1,7 +1,7 @@
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, screen, type WebContents } from 'electron'
 import { join } from 'node:path'
-import { WIDGET_ROLE_ARG } from '../../shared/ipc-channels.js'
-import type { IpcEventMap } from '../../shared/types.js'
+import { IPC_EVENT, WIDGET_ROLE_ARG } from '../../shared/ipc-channels.js'
+import type { IpcEventMap, WidgetStatePayload } from '../../shared/types.js'
 
 /**
  * The floating dictation widget (§6.2, §6.3).
@@ -34,8 +34,17 @@ const WIDGET_H = 52
 const EDGE_GAP = 24
 
 let widget: BrowserWindow | null = null
+let rendererReady = false
+let latestState: WidgetStatePayload = { state: 'cancelled' }
+const pending: (() => void)[] = []
 
 export function createWidgetWindow(): BrowserWindow {
+  const existing = getWidgetWindow()
+  if (existing) return existing
+
+  rendererReady = false
+  latestState = { state: 'cancelled' }
+  pending.length = 0
   const win = new BrowserWindow({
     width: WIDGET_W,
     height: WIDGET_H,
@@ -62,6 +71,10 @@ export function createWidgetWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      // This window stays hidden and never takes focus. Chromium's default
+      // background throttling can stall its first status paint and worklet
+      // warm-up when the app starts with Windows or lives only in the tray.
+      backgroundThrottling: false,
     },
   })
 
@@ -74,12 +87,18 @@ export function createWidgetWindow(): BrowserWindow {
   // Follow the user across virtual desktops rather than stranding the widget.
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
 
+  win.webContents.on('did-start-loading', () => {
+    rendererReady = false
+  })
+
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) void win.loadURL(`${devUrl}/widget.html`)
   else void win.loadFile(join(__dirname, '../renderer/widget.html'))
 
   win.on('closed', () => {
     widget = null
+    rendererReady = false
+    pending.length = 0
   })
 
   widget = win
@@ -116,11 +135,26 @@ export function showWidget(): void {
   const win = getWidgetWindow()
   if (!win) return
   positionWidget(win)
+  // Windows Explorer may finish starting after this window was created.
+  // Reassert the overlay order on use, while keeping the target focused.
+  win.setAlwaysOnTop(true, 'screen-saver')
   win.showInactive()
 }
 
 export function hideWidget(): void {
   getWidgetWindow()?.hide()
+}
+
+/** React calls this only after every widget IPC listener is installed. */
+export function onWidgetReady(sender: WebContents): void {
+  const win = getWidgetWindow()
+  if (!win || sender.id !== win.webContents.id || rendererReady) return
+
+  rendererReady = true
+  // A cold login launch can receive a shortcut before React mounts. Replay
+  // the latest status, rather than leaving the initial cancelled pill hidden.
+  win.webContents.send(IPC_EVENT.widgetState, latestState)
+  for (const send of pending.splice(0)) send()
 }
 
 /** Typed push to the widget renderer. */
@@ -130,5 +164,15 @@ export function sendToWidget<C extends keyof IpcEventMap>(
 ): void {
   const win = getWidgetWindow()
   if (!win) return
+  if (channel === IPC_EVENT.widgetState) latestState = payload as WidgetStatePayload
+  if (!rendererReady) {
+    // States are snapshots; commands/device requests must keep their order.
+    if (channel !== IPC_EVENT.widgetState) {
+      pending.push(() => {
+        if (!win.isDestroyed()) win.webContents.send(channel, payload)
+      })
+    }
+    return
+  }
   win.webContents.send(channel, payload)
 }

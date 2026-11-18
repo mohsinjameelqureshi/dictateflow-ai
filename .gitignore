@@ -80,6 +80,11 @@ DICTATEFLOW-MOONSHINE-INTEGRATION.md
 # project rather than documentation of it.
 LANDING-PAGE-UPDATE-*.md
 
+# Announcement copy for LinkedIn and Reddit, plus the image prompts that go
+# with it. Marketing drafts about the project, not documentation of it - same
+# category as OPEN-SOURCE-PLAN.md and the landing-page brief above.
+LAUNCH-POSTS.md
+
 # Personal interview prep, not project documentation. Same reasoning as
 # OPEN-SOURCE-PLAN.md above — kept on disk, not published.
 docs/INTERVIEW-DRILL.md

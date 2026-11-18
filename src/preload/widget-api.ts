@@ -17,6 +17,8 @@ import type {
  * cancellation is handled by the global hook in the main process, not here.
  */
 export const widgetApi = {
+  ready: (): Promise<void> => ipcRenderer.invoke(IPC.widgetReady) as Promise<void>,
+
   onCommand: (cb: (command: WidgetCommand) => void): (() => void) => {
     const listener = (_e: unknown, command: WidgetCommand) => cb(command)
     ipcRenderer.on(IPC_EVENT.widgetCommand, listener)

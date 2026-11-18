@@ -74,6 +74,7 @@ import {
   setShortcutSuspended,
 } from '../shortcut/index.js'
 import { openSettings } from '../windows/main-window.js'
+import { onWidgetReady } from '../windows/widget-window.js'
 
 /**
  * Typed wrapper over ipcMain.handle. Keeps every handler's request and
@@ -154,6 +155,10 @@ export function registerIpcHandlers(): void {
   )
 
   /* ---------------------------------------------------------- widget ---- */
+
+  handle(IPC.widgetReady, (_arg, event) => {
+    onWidgetReady(event.sender)
+  })
 
   handle(IPC.widgetClip, (payload: ClipPayload) => {
     session.receiveClip(payload)

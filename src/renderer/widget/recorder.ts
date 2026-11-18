@@ -151,7 +151,7 @@ export class Recorder {
   #ctx: AudioContext | null = null
   #workletReady: Promise<void> | null = null
   #stream: MediaStream | null = null
-  /** Bumped on cancel so a late start() cannot begin recording. */
+  /** Bumped on stop/cancel so a late start() cannot begin recording. */
   #startGen = 0
   #node: AudioWorkletNode | null = null
   #source: MediaStreamAudioSourceNode | null = null
@@ -219,9 +219,11 @@ export class Recorder {
     this.#peak = 0
 
     await this.warm()
+    if (gen !== this.#startGen) return
     const ctx = this.#ctx
     if (!ctx) throw new Error('AudioContext unavailable')
     if (ctx.state === 'suspended') await ctx.resume()
+    if (gen !== this.#startGen) return
 
     // Opened per dictation. §11 already covers the cost: the widget appears on
     // key-down, before the mic is ready, so the user has feedback while an
@@ -385,6 +387,7 @@ export class Recorder {
   }
 
   stop(): ClipPayload {
+    this.#startGen += 1
     const durationMs = this.#teardown()
     const sampleRate = this.#ctx?.sampleRate ?? TARGET_RATE
     const samples = this.#frames.reduce((n, f) => n + f.length, 0)

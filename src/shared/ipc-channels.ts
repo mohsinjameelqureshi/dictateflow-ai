@@ -69,6 +69,7 @@ export const IPC = {
 
   /* capture loop. The widget renderer owns the microphone; main owns
      everything else. Both directions are enumerated here. */
+  widgetReady: 'widget:ready',
   widgetClip: 'widget:clip',
   widgetMicError: 'widget:micError',
   widgetDevices: 'widget:devices',

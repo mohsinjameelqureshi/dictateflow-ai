@@ -157,6 +157,15 @@ export function Widget() {
     [recorder],
   )
 
+  // Must follow the subscriptions above. Main holds cold-start commands and
+  // the latest status until this handshake, so the initial listening state
+  // cannot disappear before React has attached onState/onCommand.
+  useEffect(() => {
+    void window.dictateflowWidget.ready().catch((err: unknown) => {
+      console.error('[widget] could not announce readiness:', err)
+    })
+  }, [])
+
   const { state, message, detail } = payload
   // `listening` renders a waveform instead of text, and `cancelled` is
   // invisible — both are absent from COPY on purpose.
